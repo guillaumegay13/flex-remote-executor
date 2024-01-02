@@ -93,7 +93,6 @@ class ApiClient:
             return None
         
     def writeClassHeader(self, actionName, actionId, actionUuid, file_path):
-        data_to_insert = f"""\n\n\t\"\"\"\n\tcreated : {datetime.date.today()}\n\tname : {actionName}\n\tactionId : {actionId}\n\tactionUuid : {actionUuid}\n\t\"\"\"\n\n"""
             
         # Read the existing content
         with open(file_path, 'r') as file:
@@ -104,12 +103,13 @@ class ApiClient:
 
             insert_index = 0
             if 'GroovyScriptContext context' in file_content and 'FlexSdkClient flexSdkClient' in file_content:
-                print("Yes!")
+                data_to_insert = f"""\n\n\t\"\"\"\n\tcreated : {datetime.date.today()}\n\tname : {actionName}\n\tactionId : {actionId}\n\tactionUuid : {actionUuid}\n\t\"\"\"\n\n"""
                 for i, line in enumerate(lines):
                     if 'FlexSdkClient flexSdkClient' in line.strip():
                         insert_index = i + 1
                         break
             else:
+                data_to_insert = f"""\n\n\"\"\"\ncreated : {datetime.date.today()}\nname : {actionName}\nactionId : {actionId}\nactionUuid : {actionUuid}\n\"\"\"\n\n"""
                 # Find the end of the import statements
                 for i, line in enumerate(lines):
                     if not line.strip().startswith('import') and line.strip() != '':
@@ -126,7 +126,16 @@ class ApiClient:
         
 def main():
 
+    file_path = sys.argv[1]    # Path to the current file in IntelliJ
+
     actionName = os.path.splitext(os.path.basename(file_path))[0]
+
+    baseUrl = os.environ.get('BASE_URL')
+    username = os.environ.get('USERNAME')
+    password = os.environ.get('PASSWORD')
+
+    # TODO : dynamically get the account ID
+    accountId = os.environ.get('ACCOUNT_ID')
 
     apiClient = ApiClient(baseUrl, accountId, username, password)
 
