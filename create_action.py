@@ -4,7 +4,7 @@ import datetime
 import sys
 import os
 
-class ApiClient:
+class FlexApiClient:
     def __init__(self, base_url, accountId, username, password):
         self.base_url = base_url
         self.accountId = accountId
@@ -53,18 +53,45 @@ class ApiClient:
         endpoint = f"/actions/{actionId}/configuration"
         try:
             with open(file_path, 'r') as file:
-                file_content = file.read()
+                lines = file.readlines()
 
-                ## TODO: the file content needs to be parsed properly
-                ## TODO: import the correct libs
+                ## Parse the file properly
+                start_condition = "**/"
+                end_condition = '}'
+                capture = False
+                captured_content = []
+
+                # Reverse the list to find the last '}' from the end
+                for line in reversed(lines):
+                    if end_condition in line:
+                        last_brace_index = lines.index(line)
+                        break
+
+                for line in lines:
+                    if start_condition in line:
+                        capture = True
+                        continue  # Skip the line with the start condition
+                    if capture and lines.index(line) < last_brace_index:
+                        captured_content.append(line)
+
+                # Convert the list of lines to a single string
+                extracted_content = ''.join(captured_content)
+            
                 ## TODO: auto-select the lock type
+                if 'setAssetMetadata' in extracted_content:
+                    lock_type = 'EXCLUSIVE'
+                else:
+                    lock_type = 'NONE'
+
+                ## TODO: import the correct libs
+                
                 imports = []
                 payload = {
                     'internal-script': {
-                        'script-content': file_content,
+                        'script-content': extracted_content,
                         'script-import': imports
                         },
-                    'execution-lock-type': 'EXCLUSIVE'
+                    'execution-lock-type': lock_type
                 }
 
                 response = requests.put(self.base_url + endpoint, json=payload, headers=self.headers)
@@ -103,13 +130,13 @@ class ApiClient:
 
             insert_index = 0
             if 'GroovyScriptContext context' in file_content and 'FlexSdkClient flexSdkClient' in file_content:
-                data_to_insert = f"""\n\n\t\"\"\"\n\tcreated : {datetime.date.today()}\n\tname : {actionName}\n\tactionId : {actionId}\n\tactionUuid : {actionUuid}\n\t\"\"\"\n\n"""
+                data_to_insert = f"""\n\n\t/**\n\tcreated : {datetime.date.today()}\n\tname : {actionName}\n\tactionId : {actionId}\n\tactionUuid : {actionUuid}\n\t**/\n\n"""
                 for i, line in enumerate(lines):
                     if 'FlexSdkClient flexSdkClient' in line.strip():
                         insert_index = i + 1
                         break
             else:
-                data_to_insert = f"""\n\n\"\"\"\ncreated : {datetime.date.today()}\nname : {actionName}\nactionId : {actionId}\nactionUuid : {actionUuid}\n\"\"\"\n\n"""
+                data_to_insert = f"""\n\n/**\ncreated : {datetime.date.today()}\nname : {actionName}\nactionId : {actionId}\nactionUuid : {actionUuid}\n**/\n\n"""
                 # Find the end of the import statements
                 for i, line in enumerate(lines):
                     if not line.strip().startswith('import') and line.strip() != '':
@@ -118,11 +145,28 @@ class ApiClient:
 
             # Insert the new data
             lines.insert(insert_index, data_to_insert)
+            self.classHeader = data_to_insert
 
             # Write everything back to the file
             with open(file_path, 'w') as file:
                 print("Writing header at line " + str(insert_index))
                 file.writelines(lines)
+        
+    def create_job(self, actionId):
+        """Create a new job."""
+        endpoint = "/jobs"
+        try:
+            payload = {
+                        'actionId': actionId
+                    }
+                
+            response = requests.post(self.base_url + endpoint, json=payload, headers=self.headers)
+            response.raise_for_status()
+
+            return response.json()
+        except requests.RequestException as e:
+            print(f"POST request error: {e}")
+            return None
         
 def main():
 
@@ -137,17 +181,17 @@ def main():
     # TODO : dynamically get the account ID
     accountId = os.environ.get('ACCOUNT_ID')
 
-    apiClient = ApiClient(baseUrl, accountId, username, password)
+    flexApiClient = FlexApiClient(baseUrl, accountId, username, password)
 
     print("Creating action...")
-    createActionResponse = apiClient.create_action(actionName, file_path)
+    createActionResponse = flexApiClient.create_action(actionName, file_path)
     actionId = createActionResponse["id"]
 
     print("Updating action config...")
-    apiClient.update_action_config(file_path, actionId)
+    flexApiClient.update_action_config(file_path, actionId)
 
     print("Enabling action...")
-    apiClient.enable_action(actionId)
+    flexApiClient.enable_action(actionId)
 
 if __name__ == "__main__":
     main()
