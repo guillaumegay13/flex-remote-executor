@@ -3,7 +3,6 @@ import base64
 import datetime
 import sys
 import os
-import re
 
 class FlexApiClient:
     def __init__(self, base_url, accountId, username, password):
@@ -175,6 +174,18 @@ class FlexApiClient:
             print(f"POST request error: {e}")
             return None
         
+    def get_account_id(self, accountName):
+        """Get account ID"."""
+        endpoint = f"/accounts;name={accountName}"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+
+            return response.json()["accounts"][0]["id"]
+        except requests.RequestException as e:
+            print(f"POST request error: {e}")
+            return None
+        
 def main():
 
     file_path = sys.argv[1]    # Path to the current file in IntelliJ
@@ -185,11 +196,12 @@ def main():
     username = os.environ.get('USERNAME')
     password = os.environ.get('PASSWORD')
 
-    # TODO : dynamically get the account ID
-    accountId = os.environ.get('ACCOUNT_ID')
-
     flexApiClient = FlexApiClient(baseUrl, accountId, username, password)
 
+    # Dynamically get the account ID
+    accountName = baseUrl.replace('https://', '').split('.')[0]
+    accountId = flexApiClient.get_account_id(accountName)
+    
     print("Creating action...")
     createActionResponse = flexApiClient.create_action(actionName, file_path)
     actionId = createActionResponse["id"]
