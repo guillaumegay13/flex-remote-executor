@@ -3,6 +3,7 @@ import base64
 import datetime
 import sys
 import os
+import re
 
 class FlexApiClient:
     def __init__(self, base_url, accountId, username, password):
@@ -60,6 +61,7 @@ class FlexApiClient:
                 end_condition = '}'
                 capture = False
                 captured_content = []
+                imports = []
 
                 # Reverse the list to find the last '}' from the end
                 for line in reversed(lines):
@@ -68,27 +70,32 @@ class FlexApiClient:
                         break
 
                 for line in lines:
-                    if start_condition in line:
-                        capture = True
-                        continue  # Skip the line with the start condition
                     if capture and lines.index(line) < last_brace_index:
                         captured_content.append(line)
+                    elif start_condition in line:
+                        capture = True
+                        continue  # Skip the line with the start condition
+                    else:
+                        if line.startswith('import ') and not line.startswith('import com.ooyala.flex') or line.startswith('import com.ooyala.flex.mediacore'):
+                            # Import the correct libs
+                            imports.append(line.replace('import ', ''))
+
 
                 # Convert the list of lines to a single string
                 extracted_content = ''.join(captured_content)
             
-                ## TODO: auto-select the lock type
+                # Auto-select the lock type
                 if 'setAssetMetadata' in extracted_content:
                     lock_type = 'EXCLUSIVE'
                 else:
                     lock_type = 'NONE'
 
-                ## TODO: import the correct libs
+                ## Encode the extracted_content special characters
+                encoded_content = extracted_content.encode('ISO-8859-1').decode('utf-8')
                 
-                imports = []
                 payload = {
                     'internal-script': {
-                        'script-content': extracted_content,
+                        'script-content': encoded_content,
                         'script-import': imports
                         },
                     'execution-lock-type': lock_type
