@@ -5,9 +5,8 @@ import sys
 import os
 
 class FlexApiClient:
-    def __init__(self, base_url, accountId, username, password):
+    def __init__(self, base_url, username, password):
         self.base_url = base_url
-        self.accountId = accountId
         
         # Prepare basic authentication header
         credentials = f"{username}:{password}"
@@ -20,7 +19,7 @@ class FlexApiClient:
             **auth_header,
         }
         
-    def create_action(self, actionName, file_path):
+    def create_action(self, actionName, file_path, accountId):
         """Create a new action."""
         endpoint = "/actions"
         self.actionName = actionName
@@ -31,7 +30,7 @@ class FlexApiClient:
                         'type': "Script",
                         'pluginClass': 'tv.nativ.mio.plugins.actions.jef.JEFActionProxyCommand',
                         'pluginUuid': 'cab6f437-3ce0-4857-9578-fd519b783d66',
-                        'visibilityIds': [self.accountId]
+                        'visibilityIds': [accountId]
                       }
             
             response = requests.post(self.base_url + endpoint, json=payload, headers=self.headers)
@@ -241,14 +240,14 @@ def main():
     username = os.environ.get('USERNAME')
     password = os.environ.get('PASSWORD')
 
-    flexApiClient = FlexApiClient(baseUrl, accountId, username, password)
+    flexApiClient = FlexApiClient(baseUrl, username, password)
 
     # Dynamically get the account ID
     accountName = baseUrl.replace('https://', '').split('.')[0]
     accountId = flexApiClient.get_account_id(accountName)
-    
+
     print("Creating action...")
-    createActionResponse = flexApiClient.create_action(actionName, file_path)
+    createActionResponse = flexApiClient.create_action(actionName, file_path, accountId)
     actionId = createActionResponse["id"]
 
     print("Updating action config...")
