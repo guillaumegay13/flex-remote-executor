@@ -45,8 +45,7 @@ class FlexApiClient:
 
             return response.json()
         except requests.RequestException as e:
-            print(f"POST request error: {e}")
-            return None
+            raise Exception(e)
         
     def update_action_config(self, file_path, actionId):
         """Update action configuration."""
@@ -104,11 +103,9 @@ class FlexApiClient:
                 response.raise_for_status()
                 return response.json()
         except FileNotFoundError:
-            print(f"File not found: {file_path}")
-            return None
+            raise Exception(f"File not found: {file_path}")
         except requests.RequestException as e:
-            print(f"PUT request error: {e}")
-            return None
+            raise Exception(e)
         
     def enable_action(self, actionId):
         """Enable an action."""
@@ -122,8 +119,7 @@ class FlexApiClient:
             response.raise_for_status()
             return response.json()
         except requests.RequestException as e:
-            print(f"POST request error: {e}")
-            return None
+            raise Exception(e)
         
     def writeClassHeader(self, actionName, actionId, actionUuid, file_path):
             
@@ -171,8 +167,7 @@ class FlexApiClient:
 
             return response.json()
         except requests.RequestException as e:
-            print(f"POST request error: {e}")
-            return None
+            raise Exception(e)
         
     def get_account_id(self, accountName):
         """Get account ID"."""
@@ -182,6 +177,56 @@ class FlexApiClient:
             response.raise_for_status()
 
             return response.json()["accounts"][0]["id"]
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def get_job(self, jobId):
+        """Get a job."""
+        endpoint = f"/jobs/{jobId}"
+        try:
+                
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise Exception(e)
+    
+    def retry_job(self, jobId):
+        """Retry a job."""
+        endpoint = f"/jobs/{jobId}/actions"
+        try:
+            jobStatus = self.get_job(jobId)["status"]
+
+            if jobStatus != "Failed":
+                raise Exception(f"Couldn't retry the job as it is not Failed, its status is : {jobStatus}")
+
+            payload = {
+                        'action': 'Retry'
+                    }
+                
+            response = requests.post(self.base_url + endpoint, json=payload, headers=self.headers)
+            response.raise_for_status()
+
+            return response.json()
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def cancel_job(self, jobId):
+        """Cancel a job."""
+        endpoint = f"/jobs{jobId}/actions"
+        try:
+            jobStatus = self.get_job(jobId)["status"]
+
+            if jobStatus != "Failed":
+                raise Exception(f"Couldn't cancel the job as it is not Failed, its status is : {jobStatus}")
+            payload = {
+                        'action': 'Cancel'
+                    }
+                
+            response = requests.post(self.base_url + endpoint, json=payload, headers=self.headers)
+            response.raise_for_status()
+
+            return response.json()
         except requests.RequestException as e:
             print(f"POST request error: {e}")
             return None

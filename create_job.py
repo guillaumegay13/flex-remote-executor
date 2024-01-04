@@ -20,6 +20,14 @@ def main():
         for line in lines:
             if 'actionId : ' in line:
                 actionId = line.strip().split('actionId : ')[1]
+                actionIdIndex = lines.index(line)
+                # Index to insert the jobId, after actionUuid
+                index = actionIdIndex + 2
+                break
+        
+        for line in lines:
+            if 'lastJobId : ' in line:
+                lines.remove(line)
                 break
 
     print("Launching job...")
@@ -27,6 +35,12 @@ def main():
 
     jobId = response["id"]
     print(f"Launched job ID {jobId}")
+
+    # Add job ID
+    lines.insert(index, f'\tlastJobId : {jobId}\n')
+
+    with open(file_path, 'w') as file:
+        file.writelines(lines)
 
 if __name__ == "__main__":
     main()
