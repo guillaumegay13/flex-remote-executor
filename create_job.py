@@ -1,4 +1,4 @@
-from create_action import FlexApiClient
+from flexApiClient import FlexApiClient
 import os
 import sys
 
@@ -13,7 +13,7 @@ def main():
     # TODO : dynamically get the account ID
     accountId = os.environ.get('ACCOUNT_ID')
 
-    flexApiClient = FlexApiClient(baseUrl, accountId, username, password)
+    flexApiClient = FlexApiClient(baseUrl, username, password)
 
     with open(file_path, 'r') as file:
         lines = file.readlines()

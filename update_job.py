@@ -21,8 +21,8 @@ def main():
     if not lastJobId:
         raise Exception("Last Job ID not found. Please create a new job first!")
     
-    print(f"Retrying job ID {lastJobId}...")
-    flexApiClient.retry_job(lastJobId)
+    print(f"Updating job ID {lastJobId}...")
+    flexApiClient.update_config(file_path, lastJobId, "job")
 
 if __name__ == "__main__":
     main()
