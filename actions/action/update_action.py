@@ -1,6 +1,6 @@
-from flexApiClient import FlexApiClient
-import os
+from ...client.flexApiClient import FlexApiClient
 import sys
+import os
 
 def main():
 
@@ -15,14 +15,12 @@ def main():
     with open(file_path, 'r') as file:
         lines = file.readlines()
         for line in lines:
-            if 'lastJobId : ' in line:
-                lastJobId = line.strip().split('lastJobId : ')[1]
-    
-    if not lastJobId:
-        raise Exception("Last Job ID not found. Please create a new job first!")
-    
-    print(f"Retrying job ID {lastJobId}...")
-    flexApiClient.retry_job(lastJobId)
+            if 'actionId : ' in line:
+                actionId = line.strip().split('actionId : ')[1]
+                break
+
+    print("Updating action config...")
+    flexApiClient.update_action_config(file_path, actionId)
 
 if __name__ == "__main__":
     main()

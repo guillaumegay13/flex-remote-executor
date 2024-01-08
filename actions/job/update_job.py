@@ -1,4 +1,4 @@
-from flexApiClient import FlexApiClient
+from ...client.flexApiClient import FlexApiClient
 import os
 import sys
 
