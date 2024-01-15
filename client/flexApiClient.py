@@ -199,7 +199,7 @@ class FlexApiClient:
                 raise Exception(f"Couldn't retry the job as it is not Failed, its status is : {jobStatus}")
 
             payload = {
-                        'action': 'Retry'
+                        'action': 'retry'
                     }
                 
             response = requests.post(self.base_url + endpoint, json=payload, headers=self.headers)
@@ -211,14 +211,14 @@ class FlexApiClient:
         
     def cancel_job(self, jobId):
         """Cancel a job."""
-        endpoint = f"/jobs{jobId}/actions"
+        endpoint = f"/jobs/{jobId}/actions"
         try:
             jobStatus = self.get_job(jobId)["status"]
 
             if jobStatus != "Failed":
                 raise Exception(f"Couldn't cancel the job as it is not Failed, its status is : {jobStatus}")
             payload = {
-                        'action': 'Cancel'
+                        'action': 'cancel'
                     }
                 
             response = requests.post(self.base_url + endpoint, json=payload, headers=self.headers)

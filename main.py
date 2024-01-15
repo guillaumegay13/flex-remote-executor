@@ -2,7 +2,7 @@ import sys
 import os
 from client.flexApiClient import FlexApiClient
 from actions.action import create_action, update_action
-from actions.job import create_job, update_job, retry_last_job
+from actions.job import create_job, update_job, retry_last_job, cancel_job
 from actions.file import create_file
 
 def main():
@@ -39,6 +39,10 @@ def main():
             if (len(sys.argv) == 4):
                 folder_name = sys.argv[3]
             create_file(project_path, className, folder_name)
+        case "cancel_job":
+            cancel_job(flexApiClient, file_path)
+        case _:
+            raise Exception("Action not implemented yet.s")
 
 if __name__ == "__main__":
     main()

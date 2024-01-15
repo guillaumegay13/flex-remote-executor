@@ -51,3 +51,16 @@ def retry_last_job(flexApiClient, file_path):
     
     print(f"Retrying job ID {lastJobId}...")
     flexApiClient.retry_job(lastJobId)
+
+def cancel_job(flexApiClient, file_path):
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+    for line in lines:
+        if 'lastJobId : ' in line:
+            lastJobId = line.strip().split('lastJobId : ')[1]
+    
+    if not lastJobId:
+        raise Exception("Last Job ID not found. Please create a new job first!")
+    
+    print(f"Cancelling job ID {lastJobId}...")
+    flexApiClient.cancel_job(lastJobId)
