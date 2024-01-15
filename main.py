@@ -36,9 +36,11 @@ def main():
         case "create_file":
             className = sys.argv[2]
             project_path = file_path
-            if (len(sys.argv) == 4):
+            if (len(sys.argv) == 5):
                 folder_name = sys.argv[3]
-            create_file(project_path, className, folder_name)
+                create_file(project_path, className, folder_name)
+            else:
+                create_file(project_path, className)
         case "cancel_job":
             cancel_job(flexApiClient, file_path)
         case _:
