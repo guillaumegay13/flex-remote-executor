@@ -1,4 +1,4 @@
-# flex-remote-executor-python
+# flex-remote-executor
 Automatize Flex scripts deployments using the B2B API in Python.
 
 flex-remote-executor (FRE) allows you to remotely deploy your Groovy script to Flex from IntelliJ.
@@ -19,7 +19,7 @@ The current available actions are :
 
 Feel free to submit feature requests if you think about new actions for FRE.
 
-# flex-remote-executor Installation Guide
+# Installation Guide
 
 Each environnement needs to be configured to work with FRE.
 
