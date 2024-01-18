@@ -1,9 +1,11 @@
 import sys
 import os
 from client.flexApiClient import FlexApiClient
+from client.flexCmClient import FlexCmClient
 from actions.action import create_action, update_action
 from actions.job import create_job, update_job, retry_last_job, cancel_job
 from actions.file import create_file
+from configurations.workflow_definition import get_workflow_definition_dependancies, create_dependancies_file
 
 def main():
 
@@ -43,8 +45,20 @@ def main():
                 create_file(project_path, className)
         case "cancel_job":
             cancel_job(flexApiClient, file_path)
+        case "get_workflow_dependancies":
+            defaultArgLength = 6
+            if (len(sys.argv) == defaultArgLength):
+                raise Exception("No workflow definition name has been specified!")
+            workflowDefinitionNameList = []
+            for i in range(defaultArgLength, len(sys.argv)):
+                workflowDefinitionNameList.append(sys.argv[i-1])
+            workflowDefinitionName = " ".join(workflowDefinitionNameList)
+            project_path = file_path
+            flexCmClient = FlexCmClient(baseUrl, username, password)
+            (workflowDefinitionUuid, objectReferenceList, actionList) = get_workflow_definition_dependancies(flexCmClient, workflowDefinitionName)
+            create_dependancies_file(project_path, workflowDefinitionName, workflowDefinitionUuid, objectReferenceList, actionList)
         case _:
-            raise Exception("Action not implemented yet.s")
+            raise Exception("IntelliJ Action not implemented yet.")
 
 if __name__ == "__main__":
     main()
