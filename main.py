@@ -2,7 +2,7 @@ import sys
 import os
 from client.flexApiClient import FlexApiClient
 from client.flexCmClient import FlexCmClient
-from actions.action import create_action, update_action
+from actions.action import create_action, push_action_configuration, pull_action_configuration
 from actions.job import create_job, update_job, retry_last_job, cancel_job
 from actions.file import create_file
 from configurations.workflow_definition import get_workflow_definition_dependancies, create_dependancies_file
@@ -27,8 +27,10 @@ def main():
     match action:
         case "create_action":
             create_action(flexApiClient, file_path, actionName, accountId)
-        case "update_action":
-            update_action(flexApiClient, file_path)
+        case "push_action_configuration":
+            push_action_configuration(flexApiClient, file_path)
+        case "pull_action_configuration":
+            pull_action_configuration(flexApiClient, file_path)
         case "create_job":
             create_job(flexApiClient, file_path)
         case "update_job":

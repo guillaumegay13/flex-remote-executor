@@ -44,8 +44,8 @@ class FlexApiClient:
         except requests.RequestException as e:
             raise Exception(e)
         
-    def update_config(self, file_path, objectId, objectType):
-        """Update action configuration."""
+    def push_action_configuration(self, file_path, objectId, objectType):
+        """Push the action configuration to the environment."""
         endpoint = f"/{objectType}s/{objectId}/configuration"
         try:
             with open(file_path, 'r') as file:
@@ -99,6 +99,57 @@ class FlexApiClient:
                 response = requests.put(self.base_url + endpoint, json=payload, headers=self.headers)
                 response.raise_for_status()
                 return response.json()
+        except FileNotFoundError:
+            raise Exception(f"File not found: {file_path}")
+        except requests.RequestException as e:
+            raise Exception(e)
+    
+    def pull_action_configuration(self, file_path, objectId, objectType):
+        """Pull the action configuration from the environment."""
+        endpoint = f"/{objectType}s/{objectId}/configuration"
+        try:
+
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            responseJson = response.json()
+
+            if "errors" in responseJson:
+                raise Exception(responseJson["errors"]["error"])
+            
+            scriptContent = responseJson["instance"]["internal-script"]["script-content"]
+
+            with open(file_path, 'r') as file:
+                lines = file.readlines()
+
+                ## Parse the file properly
+                start_condition = "**/"
+
+                ## TODO : add imports
+                # imports = []
+
+                actionIdLine = f"actionId : {objectId}"
+                hasHeader = False
+
+                for line in lines:
+                    if actionIdLine in line:
+                        hasHeader = True
+                    if hasHeader and start_condition in line:
+                        start_index = lines.index(line)
+                        break
+                    if "execute()" in line:
+                        break
+                
+                # Split the script content string into a list of lines
+                lines_to_add = scriptContent.split('\n')
+
+                ## Encode the extracted_content special characters
+                # encoded_content = extracted_content.encode('ISO-8859-1').decode('utf-8')
+                    
+            # Truncate the content after the specified line number
+            # and insert the new content at that position
+            lines = lines[:start_index + 1] + ['\n\t' + scriptContent.replace('\r', '') + '\n}']
+            with open(file_path, 'w') as file:
+                file.writelines(lines)
         except FileNotFoundError:
             raise Exception(f"File not found: {file_path}")
         except requests.RequestException as e:
