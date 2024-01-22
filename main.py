@@ -6,6 +6,7 @@ from actions.action import create_action, push_action_configuration, pull_action
 from actions.job import create_job, update_job, retry_last_job, cancel_job
 from actions.file import create_file
 from configurations.workflow_definition import get_workflow_definition_dependancies, create_dependancies_file
+from configurations.metadataDefinitionComparator import MetadataDefinitionComparator
 
 def main():
 
@@ -59,6 +60,27 @@ def main():
             flexCmClient = FlexCmClient(baseUrl, username, password)
             (workflowDefinitionUuid, objectReferenceList, actionList) = get_workflow_definition_dependancies(flexCmClient, workflowDefinitionName)
             create_dependancies_file(project_path, workflowDefinitionName, workflowDefinitionUuid, objectReferenceList, actionList)
+        case "compare_metadata_definitions":
+            defaultArgLength = 3
+            if (len(sys.argv) == defaultArgLength):
+                raise Exception("No metadata definition name has been specified!")
+            metadataDefinitionNameList = []
+            for i in range(defaultArgLength, len(sys.argv)):
+                metadataDefinitionNameList.append(sys.argv[i-1])
+            metadataDefinitionName = " ".join(metadataDefinitionNameList)
+
+            # Source environment
+            source_base_url = os.environ.get('SOURCE_BASE_URL')
+            source_username = os.environ.get('SOURCE_USERNAME')
+            source_password = os.environ.get('SOURCE_PASSWORD')
+            
+            # Target environment
+            target_base_url = os.environ.get('TARGET_BASE_URL')
+            target_username = os.environ.get('TARGET_USERNAME')
+            target_password = os.environ.get('TARGET_PASSWORD')
+
+            metadataDefinitionComparator = MetadataDefinitionComparator(source_base_url, source_username, source_password, target_base_url, target_username, target_password)
+            metadataDefinitionComparator.compare_metadata_definitions(metadataDefinitionName)
         case _:
             raise Exception("IntelliJ Action not implemented yet.")
 
