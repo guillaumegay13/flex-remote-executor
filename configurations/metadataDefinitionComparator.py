@@ -34,11 +34,18 @@ class MetadataDefinitionComparator:
         # all_values = source_field_set.union(target_field_set)
 
         
-        for field_to_add_in_prod in self.get_fields_differences(self.source_unique_field_set, name_to_field_stg, name_to_field_prod):
-            print(GREEN + "field to add in prod : " + str(field_to_add_in_prod) + RESET)
+        # TODO: print in get_fields_differences() is called twice below
+        # Change the logic to call it once below, instead that in the get_fields_differences() method
+        fields_to_add, differences = self.get_fields_differences(self.source_unique_field_set, name_to_field_stg, name_to_field_prod)
+        for field_to_add_in_prod in fields_to_add:
+            print(GREEN + "field to add : " + str(fields_to_add) + RESET)
 
-        for field_to_remove_in_prod in self.get_fields_differences(self.target_unique_field_set, name_to_field_prod, name_to_field_stg):
-            print(RED + "field to remove in prod : " + str(field_to_remove_in_prod) + RESET)
+        fields_to_remove, differences = self.get_fields_differences(self.target_unique_field_set, name_to_field_prod, name_to_field_stg)
+        for field_to_remove in fields_to_remove:
+            print(RED + "field to remove : " + str(field_to_remove) + RESET)
+
+        for attribute, difference in differences.items():
+            print(BLUE + displayName + RESET + ": change " + BLUE + str(attribute) + RESET + " from " + RED + str(difference[1]) + RESET + " to " + GREEN + str(difference[0]).strip() + RESET)
 
     # differences_between_lists will contain the differences between the unique objects
     def compare_fields(self, source_field, target_field):
@@ -64,9 +71,6 @@ class MetadataDefinitionComparator:
             if unique_field_name in target_name_to_field:
                 target_field = target_name_to_field[unique_field_name]
                 differences = self.compare_fields(source_field, target_field)
-                for attribute, difference in differences.items():
-                    if attribute != "searchable":
-                        print(BLUE + displayName + RESET + ": change " + BLUE + str(attribute) + RESET + " from " + RED + str(difference[1]) + RESET + " to " + GREEN + str(difference[0]).strip() + RESET)
             else:
                 field_list.append(unique_field)
-        return field_list
+        return field_list, differences

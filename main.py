@@ -15,9 +15,9 @@ def main():
 
     actionName = os.path.splitext(os.path.basename(file_path))[0]
 
-    baseUrl = os.environ.get('BASE_URL')
-    username = os.environ.get('USERNAME')
-    password = os.environ.get('PASSWORD')
+    baseUrl = os.environ.get('FRE_SOURCE_BASE_URL')
+    username = os.environ.get('FRE_SOURCE_USERNAME')
+    password = os.environ.get('FRE_SOURCE_PASSWORD')
 
     flexApiClient = FlexApiClient(baseUrl, username, password)
 
@@ -68,18 +68,13 @@ def main():
             for i in range(defaultArgLength, len(sys.argv)):
                 metadataDefinitionNameList.append(sys.argv[i-1])
             metadataDefinitionName = " ".join(metadataDefinitionNameList)
-
-            # Source environment
-            source_base_url = os.environ.get('SOURCE_BASE_URL')
-            source_username = os.environ.get('SOURCE_USERNAME')
-            source_password = os.environ.get('SOURCE_PASSWORD')
             
             # Target environment
-            target_base_url = os.environ.get('TARGET_BASE_URL')
-            target_username = os.environ.get('TARGET_USERNAME')
-            target_password = os.environ.get('TARGET_PASSWORD')
+            target_base_url = os.environ.get('FRE_TARGET_BASE_URL')
+            target_username = os.environ.get('FRE_TARGET_USERNAME')
+            target_password = os.environ.get('FRE_TARGET_PASSWORD')
 
-            metadataDefinitionComparator = MetadataDefinitionComparator(source_base_url, source_username, source_password, target_base_url, target_username, target_password)
+            metadataDefinitionComparator = MetadataDefinitionComparator(baseUrl, username, password, target_base_url, target_username, target_password)
             metadataDefinitionComparator.compare_metadata_definitions(metadataDefinitionName)
         case _:
             raise Exception("IntelliJ Action not implemented yet.")
