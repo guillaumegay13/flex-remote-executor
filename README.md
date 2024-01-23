@@ -26,7 +26,7 @@ Each environnement needs to be configured to work with FRE.
 ## Step 1: Create an API User in Flex
 1. **Create a User with Limited Permissions**: In Flex, set up a new user specifically for API access. Ensure to restrict permissions:
    - **No access to Core**.
-   - **Permissions**: Allow creating and updating actions & jobs.
+   - **Permissions**: Allow listing, creation, updating objects such as actions, jobs, metadata definitions, resources, etc.
    - **Note**: Additional permissions can be needed in future versions of FRE.
 
 ## Step 2: Add environment variables
