@@ -15,6 +15,11 @@ class FlexCmObject(FlexObject):
         super().__init__(id, uuid, name, displayName, objectTypeId, objectTypeName)
         self.flexCmName = flexCmName
 
+class FlexCmResource(FlexCmObject):
+    def __init__(self, id, uuid, name, displayName, objectTypeId, objectTypeName, flexCmName, resourceSubType):
+        super().__init__(id, uuid, name, displayName, objectTypeId, objectTypeName, flexCmName)
+        self.resourceSubType = resourceSubType
+
 class FlexMetadataField():
     def __init__(self, id, name, displayName, description, type, multiplicity, searchable, editable, required, formType, format, formatDescription, validation, maxLength, expressionEnabled, secretEnabled, validationDescription, validationHandler, valueGeneratorType, unitString, commentable, isVisible, preProcessors, isComplex):
         self.id = id

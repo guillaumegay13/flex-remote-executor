@@ -28,9 +28,9 @@ class FlexApiClient:
         except requests.RequestException as e:
             raise Exception(e)
         
-    def get_action_configuration(self, actionId):
+    def get_object_configuration(self, actionId, objectName):
         """Get action configuration."""
-        endpoint = f"/actions/{actionId}/configuration"
+        endpoint = f"/{objectName}s/{actionId}/configuration"
         try:
             response = requests.get(self.base_url + endpoint, headers=self.headers)
             response.raise_for_status()
@@ -39,6 +39,21 @@ class FlexApiClient:
         except requests.RequestException as e:
             raise Exception(e)
         
+    def get_resource(self, resourceId):
+        """Get resource."""
+        endpoint = f"/resources/{resourceId}"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+
+            return response.json()
+        except requests.RequestException as e:
+            raise Exception(e)
+    
+    def get_resource_subtype(self, resourceId):
+        """Get resource subType"""
+        return self.get_resource(resourceId)["resourceSubType"]
+    
     def create_action(self, actionName, file_path, accountId):
         """Create a new action."""
         endpoint = "/actions"
