@@ -1,5 +1,5 @@
 from configurations.metadata_definition import get_metadata_definition_fields
-from client.flexCmClient import FlexCmClient
+from client.flex_cm_client import FlexCmClient
 
 # ANSI escape codes for some colors
 RED = "\033[31m"     # Red color

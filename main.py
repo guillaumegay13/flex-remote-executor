@@ -1,11 +1,11 @@
 import sys
 import os
-from client.flexApiClient import FlexApiClient
-from client.flexCmClient import FlexCmClient
+from client.flex_api_client import FlexApiClient
+from client.flex_cm_client import FlexCmClient
 from actions.action import create_action, push_action_configuration, pull_action_configuration
 from actions.job import create_job, update_job, retry_last_job, cancel_job
 from actions.file import create_file
-from configurations.workflow_definition import get_workflow_definition_dependancies, create_dependancies_file
+from configurations.workflow_definition import WorfklowMigrator
 from configurations.metadataDefinitionComparator import MetadataDefinitionComparator
 
 def main():
@@ -55,14 +55,12 @@ def main():
             workflowDefinitionNameList = []
             for i in range(defaultArgLength, len(sys.argv)):
                 workflowDefinitionNameList.append(sys.argv[i-1])
-            workflowDefinitionName = " ".join(workflowDefinitionNameList)
-            print("workflowDefinitionName = " + workflowDefinitionName)
+            workflow_definition_name = " ".join(workflowDefinitionNameList)
             project_path = file_path
             flexCmClient = FlexCmClient(baseUrl, username, password)
-            print("Getting workflow definition...")
-            workflow_definition = flexCmClient.get_workflow_definition(workflowDefinitionName)
-            dependancyList = get_workflow_definition_dependancies(flexCmClient, workflow_definition)
-            create_dependancies_file(project_path, workflow_definition, dependancyList)
+            workflowMigrator = WorfklowMigrator(flexCmClient, workflow_definition_name)
+            workflowMigrator.get_workflow_definition_dependancies()
+            workflowMigrator.create_dependancies_file(project_path)
         case "compare_metadata_definitions":
             defaultArgLength = 3
             if (len(sys.argv) == defaultArgLength):
