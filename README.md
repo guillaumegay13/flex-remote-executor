@@ -23,13 +23,19 @@ Feel free to submit feature requests if you think about new actions for FRE.
 
 Each environnement needs to be configured to work with FRE.
 
-## Step 1: Create an API User in Flex
+## Step 1: Install Python and libraries
+   - Run :
+   ```
+   pip install -r requirements.txt
+   ```
+
+## Step 2: Create an API User in Flex
 1. **Create a User with Limited Permissions**: In Flex, set up a new user specifically for API access. Ensure to restrict permissions:
    - **No access to Core**.
    - **Permissions**: Allow listing, creation, updating objects such as actions, jobs, metadata definitions, resources, etc.
    - **Note**: Additional permissions can be needed in future versions of FRE.
 
-## Step 2: Add environment variables
+## Step 3: Add environment variables
 
    ```
    FRE_SOURCE_BASE_URL=<environment_url>/api
@@ -40,7 +46,7 @@ Each environnement needs to be configured to work with FRE.
    FRE_TARGET_PASSWORD=<password>
    ```
 
-## Step 3: Adapt the Settings for your IDE
+## Step 4: Adapt the Settings for your IDE
 1. **Extract settings.zip files**
     - Create a new folder `custom_settings`
     - Double-click on `settings.zip` and extract the files in the `custom_settings` folder
@@ -60,7 +66,7 @@ Each environnement needs to be configured to work with FRE.
 ## Note :
    - Unfortunately, it is not possible to use environment variables for those settings. It is a [feature request](https://youtrack.jetbrains.com/issue/IDEA-14429) (opened for 9 years..)
 
-## Step 4: Import your Custom Settings to Create the Buttons in your IntelliJ
+## Step 5: Import your Custom Settings to Create the Buttons in your IntelliJ
 1. **Import Settings**
     - Click on `Menu`, `File`, `Manage IDE Settings`, `Import Settings` and select the file `custom_settings.zip` in the FRE repository.
     - Click on `OK`, and make sure that the components `Menus and Toolbars Customization` and `Tools` are selected.
