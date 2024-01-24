@@ -37,7 +37,7 @@ Each environnement needs to be configured to work with FRE.
    FRE_SOURCE_PASSWORD=<password>
    FRE_TARGET_BASE_URL=<environment_url>/api
    FRE_TARGET_USERNAME=<username>
-   SET FRE_TARGET_PASSWORD=<password>
+   FRE_TARGET_PASSWORD=<password>
    ```
 
 ## Step 3: Adapt the Settings for your IDE

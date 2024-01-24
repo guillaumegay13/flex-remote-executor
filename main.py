@@ -49,17 +49,20 @@ def main():
         case "cancel_job":
             cancel_job(flexApiClient, file_path)
         case "get_workflow_dependancies":
-            defaultArgLength = 6
+            defaultArgLength = 3
             if (len(sys.argv) == defaultArgLength):
                 raise Exception("No workflow definition name has been specified!")
             workflowDefinitionNameList = []
             for i in range(defaultArgLength, len(sys.argv)):
                 workflowDefinitionNameList.append(sys.argv[i-1])
             workflowDefinitionName = " ".join(workflowDefinitionNameList)
+            print("workflowDefinitionName = " + workflowDefinitionName)
             project_path = file_path
             flexCmClient = FlexCmClient(baseUrl, username, password)
-            (workflowDefinitionUuid, objectReferenceList, actionList) = get_workflow_definition_dependancies(flexCmClient, workflowDefinitionName)
-            create_dependancies_file(project_path, workflowDefinitionName, workflowDefinitionUuid, objectReferenceList, actionList)
+            print("Getting workflow definition...")
+            workflow_definition = flexCmClient.get_workflow_definition(workflowDefinitionName)
+            dependancyList = get_workflow_definition_dependancies(flexCmClient, workflow_definition)
+            create_dependancies_file(project_path, workflow_definition, dependancyList)
         case "compare_metadata_definitions":
             defaultArgLength = 3
             if (len(sys.argv) == defaultArgLength):

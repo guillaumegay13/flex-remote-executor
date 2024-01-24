@@ -10,6 +10,11 @@ class FlexObject():
         self.objectTypeId = objectTypeId
         self.objectTypeName = objectTypeName
 
+class FlexCmObject(FlexObject):
+    def __init__(self, id, uuid, name, displayName, objectTypeId, objectTypeName, flexCmName):
+        super().__init__(id, uuid, name, displayName, objectTypeId, objectTypeName)
+        self.flexCmName = flexCmName
+
 class FlexMetadataField():
     def __init__(self, id, name, displayName, description, type, multiplicity, searchable, editable, required, formType, format, formatDescription, validation, maxLength, expressionEnabled, secretEnabled, validationDescription, validationHandler, valueGeneratorType, unitString, commentable, isVisible, preProcessors, isComplex):
         self.id = id
@@ -131,10 +136,9 @@ class FlexCmClient(FlexApiClient):
             else:
                 workflowDefinition = responseJson["workflowDefinitions"][0]
             
-            self.workflowDefinitionId = workflowDefinition["id"]
-            self.workflowDefinitionUuid = workflowDefinition["uuid"]
+            workflow_definition = FlexCmObject(workflowDefinition["id"], workflowDefinition["uuid"], workflowDefinition["name"], workflowDefinition["displayName"], workflowDefinition["objectType"]["id"], workflowDefinition["objectType"]["name"], "worfklow_definition")
 
-            return (self.workflowDefinitionUuid, self.workflowDefinitionId)
+            return workflow_definition
 
         except requests.RequestException as e:
             raise Exception(e)
@@ -178,7 +182,7 @@ class FlexCmClient(FlexApiClient):
                 for node in nodes:
                     if (node["type"] == "ACTION"):
                         object = node["action"]
-                        flexObject = FlexObject(object["id"], object["uuid"], object["name"], object["displayName"], object["actionType"]["id"], object["actionType"]["name"])
+                        flexObject = FlexCmObject(object["id"], object["uuid"], object["name"], object["displayName"], object["actionType"]["id"], object["actionType"]["name"], "action")
                         self.actionList.append(flexObject)
 
             return self.actionList

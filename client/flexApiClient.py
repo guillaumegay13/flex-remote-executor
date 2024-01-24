@@ -16,6 +16,28 @@ class FlexApiClient:
             'Content-Type': 'application/vnd.nativ.mio.v1+json',
             **auth_header,
         }
+    
+    def get_action(self, actionId):
+        """Get action."""
+        endpoint = f"/actions/{actionId}"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+
+            return response.json()
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def get_action_configuration(self, actionId):
+        """Get action configuration."""
+        endpoint = f"/actions/{actionId}/configuration"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+
+            return response.json()
+        except requests.RequestException as e:
+            raise Exception(e)
         
     def create_action(self, actionName, file_path, accountId):
         """Create a new action."""
