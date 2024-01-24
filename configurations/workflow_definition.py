@@ -8,10 +8,10 @@ def get_workflow_definition_dependancies(FlexCmClient, workflow_definition):
     # It's the list of all the dependancies to migrate for a workflow definition
     dependancyList = []
 
-    print("Getting workflow references...")
+    print(f"Getting workflow {workflow_definition.name} references...")
     objectReferenceList = FlexCmClient.get_workflow_references(workflowDefinitionId)
 
-    print("Getting workflow structure...")
+    print(f"Getting workflow {workflow_definition.name} structure...")
     actionList = FlexCmClient.get_workflow_structure(workflowDefinitionId)
 
     for action in actionList:
@@ -28,7 +28,13 @@ def get_workflow_definition_dependancies(FlexCmClient, workflow_definition):
     # It is important to keep the correct order
     dependancyList.append(workflow_definition)
 
-    return dependancyList
+    # Clean up the duplicates
+    uniqueDependancyList = []
+    for dependancy in dependancyList:
+        if dependancy not in uniqueDependancyList:
+            uniqueDependancyList.append(dependancy)
+
+    return uniqueDependancyList
 
 def get_action_dependancies(flexCmClient, action):
     actionDependancyList = []
@@ -64,6 +70,17 @@ def get_action_dependancies(flexCmClient, action):
             source_resource_instance = action_configuration["instance"]["source-file"]["source"]["source-resource-item"]["source-resource"]
             source_resource = FlexCmObject(source_resource_instance["id"], source_resource_instance["uuid"], source_resource_instance["value"], source_resource_instance["name"], source_resource_instance["type"], "resource")
             actionDependancyList.append(source_resource)
+        case "script":
+            pass
+        case "decision":
+            pass
+        case "message":
+            pass
+        case "wait":
+            pass
+        case _:
+            # This error has been added to make sure no dependancy is missing!
+            raise Exception(f"action type {action.objectTypeName} is not implemented yet!")
     return actionDependancyList
 
 def create_dependancies_file(project_path, workflow_definition, dependancyList):
@@ -83,6 +100,7 @@ def create_dependancies_file(project_path, workflow_definition, dependancyList):
     with open(file_path, "w") as file:
 
         for dependancy in dependancyList:
+            file.write(f"{dependancy.name}\n")
             file.write(f"pull --type {dependancy.flexCmName} --uuid {dependancy.uuid}\n")
             file.write(f"add --uuid {dependancy.uuid}\n")
             file.write(f"commit --uuid {dependancy.uuid}\n\n")

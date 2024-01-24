@@ -177,13 +177,16 @@ class FlexCmClient(FlexApiClient):
             nodes = responseJson["nodes"]
 
             self.actionList = []
+            self.actionNameList = []
 
             if (len(nodes) > 0):
                 for node in nodes:
                     if (node["type"] == "ACTION"):
                         object = node["action"]
-                        flexObject = FlexCmObject(object["id"], object["uuid"], object["name"], object["displayName"], object["actionType"]["id"], object["actionType"]["name"], "action")
-                        self.actionList.append(flexObject)
+                        if (object["name"] not in self.actionNameList):
+                            flexObject = FlexCmObject(object["id"], object["uuid"], object["name"], object["displayName"], object["actionType"]["id"], object["actionType"]["name"], "action")
+                            self.actionList.append(flexObject)
+                            self.actionNameList.append(flexObject.name)
 
             return self.actionList
 
