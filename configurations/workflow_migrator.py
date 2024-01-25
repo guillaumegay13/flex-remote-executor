@@ -38,18 +38,23 @@ class WorfklowMigrator:
         action_dependency_list = []
         # TODO: add all the cases below
         match action.objectTypeName:
-            case "transcode":
+            case "transcode" | "create-proxy":
                 action_configuration = self.flex_cm_client.get_object_configuration(action.id, "action")
                 # Transcode resource
                 execution_resource_instance = action_configuration["instance"]["execution-resource"]
                 transcode_resource = FlexCmResource(execution_resource_instance["id"], execution_resource_instance["uuid"], execution_resource_instance["value"], execution_resource_instance["name"], None, execution_resource_instance["type"], "resource", self.flex_cm_client.get_resource_subtype(execution_resource_instance["id"]))
                 action_dependency_list.append(transcode_resource)
                 # Transcode profile
-                output_file_list = action_configuration["instance"]["output-file"]
-                for output_file in output_file_list:
-                    transcoder_profile_instance = output_file["transcoder-profile"]["profile"]
-                    transcode_profile = FlexCmObject(transcoder_profile_instance["id"], transcoder_profile_instance["uuid"], transcoder_profile_instance["value"], transcoder_profile_instance["name"], None, transcoder_profile_instance["type"], "profile")
-                    action_dependency_list.append(transcode_profile)
+                if action.objectTypeName == "transcode":
+                    output_file_list = action_configuration["instance"]["output-file"]
+                    for output_file in output_file_list:
+                        transcoder_profile_instance = output_file["transcoder-profile"]["profile"]
+                        transcode_profile = FlexCmObject(transcoder_profile_instance["id"], transcoder_profile_instance["uuid"], transcoder_profile_instance["value"], transcoder_profile_instance["name"], None, transcoder_profile_instance["type"], "profile")
+                        action_dependency_list.append(transcode_profile)
+                elif action.objectTypeName == "create-proxy":
+                        transcoder_profile_instance = action_configuration["instance"]["transcoder-profile"]["profile"]
+                        transcode_profile = FlexCmObject(transcoder_profile_instance["id"], transcoder_profile_instance["uuid"], transcoder_profile_instance["value"], transcoder_profile_instance["name"], None, transcoder_profile_instance["type"], "profile")
+                        action_dependency_list.append(transcode_profile)
                 # Output resource
                 output_resource_instance = action_configuration["instance"]["destination"]["output-resource"]
                 output_resource = FlexCmResource(output_resource_instance["id"], output_resource_instance["uuid"], output_resource_instance["value"], output_resource_instance["name"], None, output_resource_instance["type"], "resource", self.flex_cm_client.get_resource_subtype(output_resource_instance["id"]))
@@ -60,28 +65,38 @@ class WorfklowMigrator:
                 action_dependency_list.append(output_resource)
             case "launch":
                 action_configuration = self.flex_cm_client.get_object_configuration(action.id, "action")
+                action_configuration_instance = action_configuration["instance"]
                 # Workflow definition
-                workflow_definition_instance = action_configuration["instance"]["Workflow"]
-                workflow_definition_to_append = FlexCmObject(workflow_definition_instance["id"], workflow_definition_instance["uuid"], workflow_definition_instance["value"], workflow_definition_instance["name"], None, workflow_definition_instance["type"], "workflow_definition")
-                for dependency in self.get_action_dependencies(workflow_definition_to_append):
-                    action_dependency_list.append(dependency)
-                action_dependency_list.append(workflow_definition_to_append)
+                if "Workflow" in action_configuration_instance:
+                    workflow_definition_instance = action_configuration["instance"]["Workflow"]
+                    workflow_definition_to_append = FlexCmObject(workflow_definition_instance["id"], workflow_definition_instance["uuid"], workflow_definition_instance["value"], workflow_definition_instance["name"], None, workflow_definition_instance["type"], "workflow_definition")
+                    for dependency in self.get_action_dependencies(workflow_definition_to_append):
+                        action_dependency_list.append(dependency)
+                    action_dependency_list.append(workflow_definition_to_append)
+                elif "workflows" in action_configuration_instance and len(action_configuration_instance["workflows"]) > 0:
+                    for workflow in action_configuration_instance["workflows"]:
+                        workflow_definition_instance = workflow["Workflow"]
+                        workflow_definition_to_append = FlexCmObject(workflow_definition_instance["id"], workflow_definition_instance["uuid"], workflow_definition_instance["value"], workflow_definition_instance["name"], None, workflow_definition_instance["type"], "workflow_definition")
+                        for dependency in self.get_action_dependencies(workflow_definition_to_append):
+                            action_dependency_list.append(dependency)
+                        action_dependency_list.append(workflow_definition_to_append)
             case "import":
                 action_configuration = self.flex_cm_client.get_object_configuration(action.id, "action")
                 # Workflow definition
                 source_resource_instance = action_configuration["instance"]["source-file"]["source"]["source-resource-item"]["source-resource"]
-                if not source_resource_instance["isExpression"]:
+                if "isExpression" not in source_resource_instance or not source_resource_instance["isExpression"]:
                     # if isExpression is False, then a resource is mapped
                     source_resource = FlexCmResource(source_resource_instance["id"], source_resource_instance["uuid"], source_resource_instance["value"], source_resource_instance["name"], None, source_resource_instance["type"], "resource", self.flex_cm_client.get_resource_subtype(source_resource_instance["id"]))
                     for dependency in self.get_action_dependencies(source_resource):
                         action_dependency_list.append(dependency)
                     action_dependency_list.append(source_resource)
-                if action_configuration["instance"]["source-file"]["move-file"]["move-target-resource"]:
-                    move_resource_instance = action_configuration["instance"]["source-file"]["move-file"]["move-target-resource"]
-                    move_resource = FlexCmResource(move_resource_instance["id"], move_resource_instance["uuid"], move_resource_instance["value"], move_resource_instance["name"], None, move_resource_instance["type"], "resource", self.flex_cm_client.get_resource_subtype(move_resource_instance["id"]))
-                    for dependency in self.get_action_dependencies(move_resource):
-                        action_dependency_list.append(dependency)
-                    action_dependency_list.append(move_resource)
+                if "move-file" in action_configuration["instance"]["source-file"]:
+                    if action_configuration["instance"]["source-file"]["move-file"]["move-target-resource"]:
+                        move_resource_instance = action_configuration["instance"]["source-file"]["move-file"]["move-target-resource"]
+                        move_resource = FlexCmResource(move_resource_instance["id"], move_resource_instance["uuid"], move_resource_instance["value"], move_resource_instance["name"], None, move_resource_instance["type"], "resource", self.flex_cm_client.get_resource_subtype(move_resource_instance["id"]))
+                        for dependency in self.get_action_dependencies(move_resource):
+                            action_dependency_list.append(dependency)
+                        action_dependency_list.append(move_resource)
             case "script":
                 pass
             case "decision":
@@ -99,7 +114,7 @@ class WorfklowMigrator:
                         # Folders have a storage resource dependency
                         storage_resource_instances = action_configuration["instance"]["Storage Resources"]
                         for storage_resource_instance in storage_resource_instances:                
-                            storage_resource = FlexCmResource(storage_resource_instance["Storage Resource"]["id"], storage_resource_instance["Storage Resource"]["uuid"], storage_resource_instance["Storage Resource"]["value"], storage_resource_instance["Storage Resource"]["name"], storage_resource_instance["Storage Resource"]["type"], None, "resource", self.flex_cm_client.get_resource_subtype(storage_resource_instance["Storage Resource"]["id"]))
+                            storage_resource = FlexCmResource(storage_resource_instance["Storage Resource"]["id"], storage_resource_instance["Storage Resource"]["uuid"], storage_resource_instance["Storage Resource"]["value"], storage_resource_instance["Storage Resource"]["name"], None, storage_resource_instance["Storage Resource"]["type"], "resource", self.flex_cm_client.get_resource_subtype(storage_resource_instance["Storage Resource"]["id"]))
                             action_dependency_list.append(storage_resource)
                     case "Transcode":
                         # pass as there is no dependencies for Transcode resources
@@ -107,8 +122,24 @@ class WorfklowMigrator:
                     case "Storage":
                         # Storage resources have no dependency, they are root objects
                         pass
+                    case "Process":
+                        # Process is FSP or FFP resource
+                        # Process resources have no dependency, they are root objects
+                        pass
             case "workflow-definition":
                 action_dependency_list.extend(self.get_workflow_definition_dependencies(action))
+            case "move":
+                action_configuration = self.flex_cm_client.get_object_configuration(action.id, "action")
+                folder_resource_instance = action_configuration["instance"]["folder-resource"]
+                folder_resource = FlexCmResource(folder_resource_instance["id"], folder_resource_instance["uuid"], folder_resource_instance["value"], folder_resource_instance["name"], None, folder_resource_instance["type"], "resource", "Folder")
+                action_dependency_list.extend(self.get_action_dependencies(folder_resource))
+            case "purge":
+                pass
+            case "restore" | "extract":
+                action_configuration = self.flex_cm_client.get_object_configuration(action.id, "action")
+                execution_resource_instance = action_configuration["instance"]["execution-resource"]
+                execution_resource = FlexCmResource(execution_resource_instance["id"], execution_resource_instance["uuid"], execution_resource_instance["value"], execution_resource_instance["name"], None, execution_resource_instance["type"], "resource", "Process")
+                action_dependency_list.extend(self.get_action_dependencies(execution_resource))
             case _:
                 # This error has been added to make sure no dependency is missing!
                 raise Exception(f"action type {action.objectTypeName} is not implemented yet!")
