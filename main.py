@@ -61,6 +61,7 @@ def main():
             workflowMigrator = WorfklowMigrator(flex_cm_client)
             workflow_definition = flex_cm_client.get_workflow_definition(workflow_definition_name)
             dependency_list = workflowMigrator.get_workflow_definition_dependencies(workflow_definition)
+            dependency_list.extend(workflowMigrator.get_workflow_references(workflow_definition))
             workflowMigrator.create_dependencies_file(project_path, workflow_definition, dependency_list)
         case "compare_metadata_definitions":
             defaultArgLength = 3

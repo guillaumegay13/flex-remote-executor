@@ -13,13 +13,13 @@ class FlexCmClient(FlexApiClient):
             response = requests.get(self.base_url + endpoint, headers=self.headers)
             response.raise_for_status()
 
-            responseJson = response.json()
-            totalCount = responseJson["totalCount"]
+            response_json = response.json()
+            totalCount = response_json["totalCount"]
 
             if (totalCount == 0):
                 raise Exception(f"No workflow definition found with name {workflowDefinitionName}")
             else:
-                workflowDefinition = responseJson["workflowDefinitions"][0]
+                workflowDefinition = response_json["workflowDefinitions"][0]
             
             workflow_definition = FlexCmObject(workflowDefinition["id"], workflowDefinition["uuid"], workflowDefinition["name"], workflowDefinition["displayName"], workflowDefinition["objectType"]["id"], workflowDefinition["objectType"]["name"], "worfklow_definition")
 
@@ -35,17 +35,39 @@ class FlexCmClient(FlexApiClient):
             response = requests.get(self.base_url + endpoint, headers=self.headers)
             response.raise_for_status()
 
-            responseJson = response.json()
-            totalCount = responseJson["totalCount"]
-            self.flexObjectReferenceList = []
+            response_json = response.json()
+            totalCount = response_json["totalCount"]
+            self.flex_object_reference_list = []
 
             if (totalCount > 0):
-                objects = responseJson["objects"]
+                objects = response_json["objects"]
                 for object in objects:
-                    flexObject = FlexObject(object["id"], object["uuid"], object["name"], object["displayName"], object["objectType"]["id"], object["objectType"]["name"])
-                    self.flexObjectReferenceList.append(flexObject)
+                    flex_object = FlexCmObject(object["id"], object["uuid"], object["name"], object["displayName"], object["objectType"]["id"], object["objectType"]["name"], object["objectType"]["name"])
+                    self.flex_object_reference_list.append(flex_object)
 
-            return self.flexObjectReferenceList
+            return self.flex_object_reference_list
+
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def get_object_references(self, object):
+        """Get object references."""
+        endpoint = f"/{object.objectTypeName}s/{object.id}/references"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+
+            response_json = response.json()
+            totalCount = response_json["totalCount"]
+            self.flex_object_reference_list = []
+
+            if (totalCount > 0):
+                objects = response_json["objects"]
+                for object in objects:
+                    flex_object = FlexCmObject(object["id"], object["uuid"], object["name"], object["displayName"], object["objectType"]["id"], object["objectType"]["name"], object["objectType"]["name"])
+                    self.flex_object_reference_list.append(flex_object)
+
+            return self.flex_object_reference_list
 
         except requests.RequestException as e:
             raise Exception(e)
@@ -57,9 +79,9 @@ class FlexCmClient(FlexApiClient):
             response = requests.get(self.base_url + endpoint, headers=self.headers)
             response.raise_for_status()
 
-            responseJson = response.json()
+            response_json = response.json()
             
-            nodes = responseJson["nodes"]
+            nodes = response_json["nodes"]
 
             self.actionList = []
             self.actionNameList = []
@@ -91,13 +113,13 @@ class FlexCmClient(FlexApiClient):
             response = requests.get(self.base_url + endpoint, headers=self.headers)
             response.raise_for_status()
 
-            responseJson = response.json()
-            totalCount = responseJson["totalCount"]
+            response_json = response.json()
+            totalCount = response_json["totalCount"]
 
             if (totalCount == 0):
                 raise Exception(f"No metadata definition found with name {metadataDefinitionName}")
             else:
-                metadataDefinition = responseJson["metadataDefinitions"][0]
+                metadataDefinition = response_json["metadataDefinitions"][0]
             
             self.metadataDefinitionId = metadataDefinition["id"]
             self.metadataDefinitionUuid = metadataDefinition["uuid"]
@@ -113,9 +135,9 @@ class FlexCmClient(FlexApiClient):
         try:
             response = requests.get(self.base_url + endpoint, headers=self.headers)
             response.raise_for_status()
-            responseJson = response.json()
+            response_json = response.json()
 
-            return self.add_fields(responseJson["definition"])
+            return self.add_fields(response_json["definition"])
         except requests.RequestException as e:
             raise Exception(e)
         
@@ -161,12 +183,12 @@ class FlexCmClient(FlexApiClient):
         try:
             response = requests.get(self.base_url + endpoint, headers=self.headers)
             response.raise_for_status()
-            responseJson = response.json()
+            response_json = response.json()
 
-            if "errors" in responseJson:
-                raise Exception(responseJson["errors"]["error"])
+            if "errors" in response_json:
+                raise Exception(response_json["errors"]["error"])
 
-            return responseJson["name"]
+            return response_json["name"]
         except requests.RequestException as e:
             raise Exception(e)
         
@@ -176,11 +198,11 @@ class FlexCmClient(FlexApiClient):
         try:
             response = requests.get(self.base_url + endpoint, headers=self.headers)
             response.raise_for_status()
-            responseJson = response.json()
+            response_json = response.json()
 
-            if "errors" in responseJson:
-                raise Exception(responseJson["errors"]["error"])
+            if "errors" in response_json:
+                raise Exception(response_json["errors"]["error"])
 
-            return (responseJson["name"], responseJson["displayName"], responseJson["pluralName"])
+            return (response_json["name"], response_json["displayName"], response_json["pluralName"])
         except requests.RequestException as e:
             raise Exception(e)

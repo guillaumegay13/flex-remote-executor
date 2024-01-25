@@ -13,10 +13,6 @@ class WorfklowMigrator:
         # It's the list of all the dependencies to migrate for a workflow definition
         full_dependency_list = []
 
-        # TODO : get object references instead of workflow references
-        # print(f"Getting workflow {workflow_definition.name} references...")
-        # objectReferenceList = FlexCmClient.get_workflow_references(workflow_definition_id)
-
         """Get workflow structure actions."""
         print(f"Getting workflow {workflow_definition.name} structure...")
         actionList = self.flex_cm_client.get_workflow_structure(workflow_definition_id)
@@ -24,9 +20,6 @@ class WorfklowMigrator:
         """Get action dependencies for each action of the workflow structure."""
         for action in actionList:
             full_dependency_list.extend(self.get_action_dependencies(action))
-
-        # TODO: manage the references
-        # Add them after the workflow definition ? What about the references dependencies ? Ideally : 1) references dependencies, 2) references.
         
         # Add workflow definition after all its dependencies
         # It is important to keep the correct order
@@ -124,8 +117,29 @@ class WorfklowMigrator:
         # It is crutial to keep this order
         action_dependency_list.append(action)
 
-        # TODO: investigate possibility to use only dependency_list class attribute instead
         return action_dependency_list
+    
+    """
+    def get_object_references(self, object):
+        object_id = object.id
+        return self.flex_cm_client.get_object_references(object_id)
+    """
+    
+    def get_workflow_references(self, worfklow_definition):
+        """Get workflow references."""
+        reference_list = []
+        workflow_definition_id = worfklow_definition.id
+        # Add the workflow references in the dependency list
+        workflow_reference_list = self.flex_cm_client.get_workflow_references(workflow_definition_id)
+        for flex_object in workflow_reference_list:
+            # TODO: recursively get references, without going too deep
+            """
+            if flex_object.objectTypeName != "workflow-definition":
+                reference_list.extend(self.get_object_references(flex_object))
+            """
+            reference_list.append(flex_object)
+
+        return reference_list
 
     def create_dependencies_file(self, project_path, workflow_definition, dependency_list):
         """Create dependency files in /src/configurations/ project directory."""
@@ -143,8 +157,11 @@ class WorfklowMigrator:
         # Create new file
         with open(file_path, "w") as file:
 
-            for dependency in dependency_list:
+            for index, dependency in enumerate(dependency_list):
                 file.write(f"{dependency.name}\n")
                 file.write(f"pull --type {dependency.flexCmName} --uuid {dependency.uuid}\n")
                 file.write(f"add --uuid {dependency.uuid}\n")
                 file.write(f"commit --uuid {dependency.uuid}\n\n")
+                # If the dependency is the actual workflow definition and it's not the last object of the dependency list, meaning there are references
+                if dependency.uuid == workflow_definition.uuid and index != len(dependency_list) - 1:
+                    file.write("\nReferences (optional): \n\n")
