@@ -57,10 +57,11 @@ def main():
                 workflowDefinitionNameList.append(sys.argv[i-1])
             workflow_definition_name = " ".join(workflowDefinitionNameList)
             project_path = file_path
-            flexCmClient = FlexCmClient(baseUrl, username, password)
-            workflowMigrator = WorfklowMigrator(flexCmClient, workflow_definition_name)
-            workflowMigrator.get_workflow_definition_dependancies()
-            workflowMigrator.create_dependancies_file(project_path)
+            flex_cm_client = FlexCmClient(baseUrl, username, password)
+            workflowMigrator = WorfklowMigrator(flex_cm_client)
+            workflow_definition = flex_cm_client.get_workflow_definition(workflow_definition_name)
+            dependency_list = workflowMigrator.get_workflow_definition_dependencies(workflow_definition)
+            workflowMigrator.create_dependencies_file(project_path, workflow_definition, dependency_list)
         case "compare_metadata_definitions":
             defaultArgLength = 3
             if (len(sys.argv) == defaultArgLength):
