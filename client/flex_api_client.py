@@ -315,3 +315,30 @@ class FlexApiClient:
         except requests.RequestException as e:
             print(f"POST request error: {e}")
             return None
+    
+    def get_jobs(self, name=None, status=None):
+        """Get a job."""
+        endpoint = f"/jobs"
+        filters = []
+        if (name):
+            filters.append(f"name={name}")
+        if (status):
+            filters.append(f"statuses={status}")
+        for filter in filters:
+            endpoint += f";{filter}"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def get_job_history(self, job_id):
+        """Get a job."""
+        endpoint = f"/jobs/{job_id}/history"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise Exception(e)
