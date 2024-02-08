@@ -30,7 +30,7 @@ def main():
     metadata_migration_tracker = MetadataMigrationTracker(flex_api_client)
     #metadata_migration_tracker.get_metadata_migration_jobs("createdFrom=08 Feb 2024 14:40:00")
 
-    metadata_migration_tracker.get_metadata_migration_workflows("createdFrom=08 Feb 2024 14:40:00")
+    metadata_migration_tracker.get_metadata_migration_workflows("createdFrom=08 Feb 2024 16:40:00")
 
 
 if __name__ == "__main__":

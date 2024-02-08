@@ -81,7 +81,7 @@ class FlexApiClient:
             response_json = response.json()
             workflow_list = []
             for workflow in response_json["workflows"]:
-                flex_workflow = FlexInstance(workflow["id"], None, workflow["name"], None, workflow["objectType"]["id"], workflow["objectType"]["name"], workflow["status"], workflow["scheduled"], workflow["created"])
+                flex_workflow = FlexInstance(workflow["id"], None, workflow["name"], None, workflow["objectType"]["id"], workflow["objectType"]["name"], workflow["status"], None, workflow["created"])
                 workflow_list.append(flex_workflow)
 
             # default limit is 100
