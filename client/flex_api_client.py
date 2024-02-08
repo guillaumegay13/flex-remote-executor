@@ -36,7 +36,7 @@ class FlexApiClient:
             response = requests.get(self.base_url + endpoint, headers=self.headers)
             response.raise_for_status()
 
-            return response.json()
+            return response.json()["workflowDefinitions"][0]["id"]
         except requests.RequestException as e:
             raise Exception(e)
         
@@ -51,7 +51,7 @@ class FlexApiClient:
         except requests.RequestException as e:
             raise Exception(e)
     
-    def get_jobs(self, filters, offset = 0):
+    def get_jobs_by_filter(self, filters, offset = 0):
         """Get jobs."""
         endpoint = f"/jobs;{filters};offset={offset}"
         try:
@@ -60,19 +60,19 @@ class FlexApiClient:
             response_json = response.json()
             job_list = []
             for job in response_json["jobs"]:
-                flex_job = FlexInstance(job["id"], None, job["name"], None, job["objectType"]["id"], job["objectType"]["name"], job["status"], job["scheduled"], job["start"], job["created"])
+                flex_job = FlexInstance(job["id"], None, job["name"], None, job["objectType"]["id"], job["objectType"]["name"], job["status"], job["scheduled"], job["created"])
                 job_list.append(flex_job)
 
             # default limit is 100
             total_results = response_json["totalCount"]
             if (total_results > offset + 100):
-                job_list.extend(self.get_jobs(filters, offset + 100))
+                job_list.extend(self.get_jobs_by_filter(filters, offset + 100))
 
             return job_list
         except requests.RequestException as e:
             raise Exception(e)
         
-    def get_workflows(self, filters, offset = 0):
+    def get_workflows_by_filter(self, filters, offset = 0):
         """Get workflows."""
         endpoint = f"/workflows;{filters};offset={offset}"
         try:
@@ -80,14 +80,14 @@ class FlexApiClient:
             response.raise_for_status()
             response_json = response.json()
             workflow_list = []
-            for workflow in response_json["jobs"]:
-                flex_job = FlexInstance(workflow["id"], None, workflow["name"], None, workflow["objectType"]["id"], workflow["objectType"]["name"], workflow["status"], workflow["scheduled"], workflow["start"], workflow["created"])
-                workflow_list.append(flex_job)
+            for workflow in response_json["workflows"]:
+                flex_workflow = FlexInstance(workflow["id"], None, workflow["name"], None, workflow["objectType"]["id"], workflow["objectType"]["name"], workflow["status"], workflow["scheduled"], workflow["created"])
+                workflow_list.append(flex_workflow)
 
             # default limit is 100
             total_results = response_json["totalCount"]
             if (total_results > offset + 100):
-                workflow_list.append(self.get_workflows(filters, offset + 100))
+                workflow_list.extend(self.get_workflows_by_filter(filters, offset + 100))
 
             return workflow_list
         except requests.RequestException as e:

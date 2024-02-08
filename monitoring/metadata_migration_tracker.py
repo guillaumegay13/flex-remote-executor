@@ -12,7 +12,7 @@ class MetadataMigrationTracker:
             filters += f"actionId={action_id}"
         else: 
             filters = f"actionId={action_id}"
-        job_list = self.flex_api_client.get_jobs(filters)
+        job_list = self.flex_api_client.get_jobs_by_filter(filters)
 
         data = [{'id': job.id, 'status': job.status, 'created': job.created} for job in job_list]
 
@@ -26,8 +26,8 @@ class MetadataMigrationTracker:
     def get_metadata_migration_workflows(self, filters = None):
         workflow_definition_name = "RS2i Metadata Migration"
         workflow_definition_id = self.flex_api_client.get_workflow_definition_id(workflow_definition_name)
-        filters = f"workflowDefinitionId={workflow_definition_id}"
-        workflow_list = self.flex_api_client.get_workflows(filters)
+        filters = f"definitionId={workflow_definition_id}"
+        workflow_list = self.flex_api_client.get_workflows_by_filter(filters)
 
         data = [{'id': workflow.id, 'status': workflow.status, 'created': workflow.created} for workflow in workflow_list]
 

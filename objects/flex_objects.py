@@ -119,9 +119,8 @@ class FlexObjectField(FlexMetadataField):
         return self.objectType == other.objectType
     
 class FlexInstance(FlexObject):
-    def __init__(self, id, uuid, name, displayName, objectTypeId, objectTypeName, status, scheduled, start, created):
+    def __init__(self, id, uuid, name, displayName, objectTypeId, objectTypeName, status, scheduled, created):
         super().__init__(id, uuid, name, displayName, objectTypeId, objectTypeName)
         self.status = status
         self.scheduled = scheduled
-        self.start = start
         self.created = created
