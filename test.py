@@ -7,6 +7,7 @@ from actions.job import create_job, update_job, retry_last_job, cancel_job
 from actions.file import create_file
 from configurations.workflow_migrator import WorfklowMigrator
 from configurations.metadata_definition_comparator import MetadataDefinitionComparator
+from monitoring.metadata_migration_tracker import MetadataMigrationTracker
 
 def main():
 
@@ -14,15 +15,21 @@ def main():
     username = os.environ.get('FRE_SOURCE_USERNAME')
     password = os.environ.get('FRE_SOURCE_PASSWORD')
 
-    metadataDefinitionName = "Photo  PHO"
+    #metadataDefinitionName = "Photo  PHO"
             
     # Target environment
-    target_base_url = os.environ.get('FRE_TARGET_BASE_URL')
-    target_username = os.environ.get('FRE_TARGET_USERNAME')
-    target_password = os.environ.get('FRE_TARGET_PASSWORD')
+    # target_base_url = os.environ.get('FRE_TARGET_BASE_URL')
+    # target_username = os.environ.get('FRE_TARGET_USERNAME')
+    #target_password = os.environ.get('FRE_TARGET_PASSWORD')
 
-    metadataDefinitionComparator = MetadataDefinitionComparator(baseUrl, username, password, target_base_url, target_username, target_password)
-    metadataDefinitionComparator.compare_metadata_definitions(metadataDefinitionName)
+    # metadataDefinitionComparator = MetadataDefinitionComparator(baseUrl, username, password, target_base_url, target_username, target_password)
+    # metadataDefinitionComparator.compare_metadata_definitions(metadataDefinitionName)
+
+    flex_api_client = FlexApiClient(baseUrl, username, password)
+
+    metadata_migration_tracker = MetadataMigrationTracker(flex_api_client)
+    metadata_migration_tracker.get_metadata_migration_jobs("created>08 Feb 2024 2:40:00")
+
 
 if __name__ == "__main__":
     main()

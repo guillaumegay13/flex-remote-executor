@@ -117,3 +117,11 @@ class FlexObjectField(FlexMetadataField):
         # TODO: for objectTypeId, add an object API query to get the UDO name based on it
         # TODO: then, compare both object names
         return self.objectType == other.objectType
+    
+class FlexInstance(FlexObject):
+    def __init__(self, id, uuid, name, displayName, objectTypeId, objectTypeName, status, scheduled, start, created):
+        super().__init__(id, uuid, name, displayName, objectTypeId, objectTypeName)
+        self.status = status
+        self.scheduled = scheduled
+        self.start = start
+        self.created = created

@@ -1,6 +1,7 @@
 import requests
 import base64
 import datetime
+from objects.flex_objects import FlexInstance
 
 class FlexApiClient:
     def __init__(self, base_url, username, password):
@@ -25,6 +26,70 @@ class FlexApiClient:
             response.raise_for_status()
 
             return response.json()
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def get_workflow_definition_id(self, workflowDefinitionName):
+        """Get Workflow Definition."""
+        endpoint = f"/workflowDefinitions;name={workflowDefinitionName};exactNameMatch=true"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+
+            return response.json()
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def get_action_id(self, actionName):
+        """Get action."""
+        endpoint = f"/actions;name={actionName};exactNameMatch=true"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+
+            return response.json()["actions"][0]["id"]
+        except requests.RequestException as e:
+            raise Exception(e)
+    
+    def get_jobs(self, filters, offset = 0):
+        """Get jobs."""
+        endpoint = f"/jobs;{filters};offset={offset}"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            response_json = response.json()
+            job_list = []
+            for job in response_json["jobs"]:
+                flex_job = FlexInstance(job["id"], None, job["name"], None, job["objectType"]["id"], job["objectType"]["name"], job["status"], job["scheduled"], job["start"], job["created"])
+                job_list.append(flex_job)
+
+            # default limit is 100
+            total_results = response_json["totalCount"]
+            if (total_results > offset + 100):
+                job_list.extend(self.get_jobs(filters, offset + 100))
+
+            return job_list
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def get_workflows(self, filters, offset = 0):
+        """Get workflows."""
+        endpoint = f"/workflows;{filters};offset={offset}"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            response_json = response.json()
+            workflow_list = []
+            for workflow in response_json["jobs"]:
+                flex_job = FlexInstance(workflow["id"], None, workflow["name"], None, workflow["objectType"]["id"], workflow["objectType"]["name"], workflow["status"], workflow["scheduled"], workflow["start"], workflow["created"])
+                workflow_list.append(flex_job)
+
+            # default limit is 100
+            total_results = response_json["totalCount"]
+            if (total_results > offset + 100):
+                workflow_list.append(self.get_workflows(filters, offset + 100))
+
+            return workflow_list
         except requests.RequestException as e:
             raise Exception(e)
         
