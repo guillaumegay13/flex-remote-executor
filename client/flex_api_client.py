@@ -1,7 +1,7 @@
 import requests
 import base64
 import datetime
-from objects.flex_objects import FlexInstance
+from objects.flex_objects import FlexInstance, FlexAsset
 
 class FlexApiClient:
     def __init__(self, base_url, username, password):
@@ -81,7 +81,9 @@ class FlexApiClient:
             response_json = response.json()
             workflow_list = []
             for workflow in response_json["workflows"]:
-                flex_workflow = FlexInstance(workflow["id"], None, workflow["name"], None, workflow["objectType"]["id"], workflow["objectType"]["name"], workflow["status"], None, workflow["created"])
+                if (workflow["asset"]):
+                    flex_workflow = FlexInstance(workflow["id"], None, workflow["name"], None, workflow["objectType"]["id"], workflow["objectType"]["name"], workflow["status"], None, workflow["created"], workflow["asset"]["id"], workflow["asset"]["name"], workflow["asset"]["type"])
+                else: flex_workflow = FlexInstance(workflow["id"], None, workflow["name"], None, workflow["objectType"]["id"], workflow["objectType"]["name"], workflow["status"], None, workflow["created"], None, None, None)
                 workflow_list.append(flex_workflow)
 
             # default limit is 100
@@ -405,5 +407,46 @@ class FlexApiClient:
             response = requests.get(self.base_url + endpoint, headers=self.headers)
             response.raise_for_status()
             return response.json()
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def get_asset(self, asset_id):
+        """Get an asset."""
+        endpoint = f"/assets/{asset_id}"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def get_asset_filename(self, asset_id):
+        """Get an asset filename."""
+        try:
+            return self.get_asset(asset_id)["fileInformation"]["originalFileName"]
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def get_assets_by_filters(self, filters, offset = 0):
+        """Get assets."""
+        endpoint = f"/assets;{filters};offset={offset}"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            response_json = response.json()
+            asset_list = []
+            for asset in response_json["assets"]:
+                if (asset["fileInformation"]["originalFileName"]):
+                    flex_asset = FlexAsset(asset["id"], asset["uuid"], asset["name"], asset["displayName"], asset["objectType"]["id"], asset["objectType"]["name"], asset["fileInformation"]["originalFileName"])
+                else:
+                    flex_asset = FlexAsset(asset["id"], asset["uuid"], asset["name"], asset["displayName"], asset["objectType"]["id"], asset["objectType"]["name"], None)
+                asset_list.append(flex_asset)
+
+            # default limit is 100
+            total_results = response_json["totalCount"]
+            if (total_results > offset + 100):
+                asset_list.extend(self.get_assets_by_filters(filters, offset + 100))
+
+            return asset_list
         except requests.RequestException as e:
             raise Exception(e)

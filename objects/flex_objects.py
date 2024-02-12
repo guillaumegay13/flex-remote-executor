@@ -7,6 +7,11 @@ class FlexObject():
         self.objectTypeId = objectTypeId
         self.objectTypeName = objectTypeName
 
+class FlexAsset(FlexObject):
+    def __init__(self, id, uuid, name, displayName, objectTypeId, objectTypeName, originalFileName = None):
+        super().__init__(id, uuid, name, displayName, objectTypeId, objectTypeName)
+        self.originalFileName = originalFileName
+
 class FlexCmObject(FlexObject):
     def __init__(self, id, uuid, name, displayName, objectTypeId, objectTypeName, flexCmName):
         super().__init__(id, uuid, name, displayName, objectTypeId, objectTypeName)
@@ -119,8 +124,11 @@ class FlexObjectField(FlexMetadataField):
         return self.objectType == other.objectType
     
 class FlexInstance(FlexObject):
-    def __init__(self, id, uuid, name, displayName, objectTypeId, objectTypeName, status, scheduled, created):
+    def __init__(self, id, uuid, name, displayName, objectTypeId, objectTypeName, status, scheduled, created, asset_id, asset_name, asset_type):
         super().__init__(id, uuid, name, displayName, objectTypeId, objectTypeName)
         self.status = status
         self.scheduled = scheduled
         self.created = created
+        self.asset_id = asset_id
+        self.asset_name = asset_name
+        self.asset_type = asset_type
