@@ -27,7 +27,8 @@ class MetadataMigrationTracker:
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 
         filename = f"{action_name}_{timestamp}.csv"
-        df.to_csv(f'exports/{filename}', columns=['id', 'status', 'created'], index=False)
+        self.create_empty_directory('exports/jobs/')
+        df.to_csv(f'exports/jobs/{filename}', columns=['id', 'status', 'created'], index=False)
 
     """
     Extract a list of workflows information as CSV.
@@ -45,6 +46,7 @@ class MetadataMigrationTracker:
 
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         filename = f"{workflow_definition_name}_{timestamp}.csv"
+        self.create_empty_directory('exports/workflows/')
 
         if include_asset_filename:
             asset_original_file_name_map = {}
@@ -55,11 +57,11 @@ class MetadataMigrationTracker:
 
             data = [{'id': workflow.id, 'status': workflow.status, 'created': workflow.created, 'asset_id': workflow.asset_id, 'asset_name': workflow.asset_name, 'original_file_name': asset_original_file_name_map[workflow.asset_id]} for workflow in workflow_list]
             df = pd.DataFrame(data)
-            df.to_csv(f'exports/{filename}', columns=['id', 'status', 'created', 'asset_id', 'asset_name', 'original_file_name'], index=False)
+            df.to_csv(f'exports/workflows/{filename}', columns=['id', 'status', 'created', 'asset_id', 'asset_name', 'original_file_name'], index=False)
         else:
             data = [{'id': workflow.id, 'status': workflow.status, 'created': workflow.created, 'asset_id': workflow.asset_id, 'asset_name': workflow.asset_name} for workflow in workflow_list]
             df = pd.DataFrame(data)
-            df.to_csv(f'exports/{filename}', columns=['id', 'status', 'created', 'asset_id', 'asset_name'], index=False)
+            df.to_csv(f'exports/workflows/{filename}', columns=['id', 'status', 'created', 'asset_id', 'asset_name'], index=False)
 
     """
     Extract a list of assets information as CSV.
@@ -72,14 +74,14 @@ class MetadataMigrationTracker:
 
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         filename = f"assets_{timestamp}.csv"
+        self.create_empty_directory('exports/assets/')
 
         if include_asset_filename:
             data = [{'id': asset.id, 'name': asset.name, 'original_file_name': asset.originalFileName} for asset in asset_list]
             df = pd.DataFrame(data)
-
-            df.to_csv(f'exports/{filename}', columns=['id', 'name', 'original_file_name'], index=False)
+            df.to_csv(f'exports/assets/{filename}', columns=['id', 'name', 'original_file_name'], index=False)
         else:
             data = [{'id': asset.id, 'name': asset.name} for asset in asset_list]
             df = pd.DataFrame(data)
-            df.to_csv(f'exports/{filename}', columns=['id', 'name'], index=False)
+            df.to_csv(f'exports/assets/{filename}', columns=['id', 'name'], index=False)
 

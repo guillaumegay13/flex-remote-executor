@@ -33,9 +33,12 @@ def main():
     # workflow_definition_name = "Publish Asset to Imagen"
     # metadata_migration_tracker.get_metadata_migration_workflows(workflow_definition_name, "createdFrom=12 Feb 2024", True)
 
-    pho_metadata_definition_id = 972
-    published_taxon_id = 40107159
-    metadata_migration_tracker.get_assets(f"metadataDefinitionId={pho_metadata_definition_id};metadata=publishing-status:{published_taxon_id}", True)
+    # pho_metadata_definition_id = 972
+    # published_taxon_id = 40107159
+    # metadata_migration_tracker.get_assets(f"metadataDefinitionId={pho_metadata_definition_id};metadata=publishing-status:{published_taxon_id}", True)
+
+    workflow_definition_name = "RS2i Metadata Migration"
+    metadata_migration_tracker.get_metadata_migration_workflows(workflow_definition_name, "createdFrom=12 Feb 2024;status=Failed")
 
 
 if __name__ == "__main__":
