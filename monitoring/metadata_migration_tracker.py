@@ -1,9 +1,15 @@
 import pandas as pd
 from datetime import datetime
+import os
 
 class MetadataMigrationTracker:
     def __init__(self, flex_api_client):
         self.flex_api_client = flex_api_client
+        self.create_empty_directory('exports')
+
+    def create_empty_directory(self, directory_path):
+        if not os.path.exists(directory_path):
+            os.makedirs(directory_path)
 
     def get_metadata_migration_jobs(self, filters = None):
         action_name = "parse-rs2i-xml"
