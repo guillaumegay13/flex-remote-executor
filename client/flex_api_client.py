@@ -81,7 +81,7 @@ class FlexApiClient:
             response_json = response.json()
             workflow_list = []
             for workflow in response_json["workflows"]:
-                if (workflow["asset"]):
+                if (workflow.get("asset")):
                     flex_workflow = FlexInstance(workflow["id"], None, workflow["name"], None, workflow["objectType"]["id"], workflow["objectType"]["name"], workflow["status"], None, workflow["created"], workflow["asset"]["id"], workflow["asset"]["name"], workflow["asset"]["type"])
                 else: flex_workflow = FlexInstance(workflow["id"], None, workflow["name"], None, workflow["objectType"]["id"], workflow["objectType"]["name"], workflow["status"], None, workflow["created"], None, None, None)
                 workflow_list.append(flex_workflow)
@@ -448,5 +448,16 @@ class FlexApiClient:
                 asset_list.extend(self.get_assets_by_filters(filters, offset + 100))
 
             return asset_list
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def get_workflow_jobs(self, workflow_id):
+        """Get workflow jobs."""
+        endpoint = f"/workflows/{workflow_id}/jobs"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            response_json = response.json()
+            return response_json
         except requests.RequestException as e:
             raise Exception(e)

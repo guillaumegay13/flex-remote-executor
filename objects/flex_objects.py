@@ -7,6 +7,16 @@ class FlexObject():
         self.objectTypeId = objectTypeId
         self.objectTypeName = objectTypeName
 
+class FlexJob(FlexObject):
+    def __init__(self, id, name, status, start, end, owner, error = None):
+        self.id = id
+        self.name = name
+        self.status = status
+        self.start = start
+        self.end = end
+        self.owner = owner
+        self.error = error
+
 class FlexAsset(FlexObject):
     def __init__(self, id, uuid, name, displayName, objectTypeId, objectTypeName, originalFileName = None):
         super().__init__(id, uuid, name, displayName, objectTypeId, objectTypeName)
