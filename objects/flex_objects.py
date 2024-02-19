@@ -8,7 +8,7 @@ class FlexObject():
         self.objectTypeName = objectTypeName
 
 class FlexJob(FlexObject):
-    def __init__(self, id, name, status, start, end, owner, error = None):
+    def __init__(self, id, name, status, start = None, end = None, owner = None, error = None):
         self.id = id
         self.name = name
         self.status = status
@@ -134,7 +134,7 @@ class FlexObjectField(FlexMetadataField):
         return self.objectType == other.objectType
     
 class FlexInstance(FlexObject):
-    def __init__(self, id, uuid, name, displayName, objectTypeId, objectTypeName, status, scheduled, created, asset_id, asset_name, asset_type):
+    def __init__(self, id, uuid, name, displayName, objectTypeId, objectTypeName, status, scheduled, created, asset_id = None, asset_name = None, asset_type = None):
         super().__init__(id, uuid, name, displayName, objectTypeId, objectTypeName)
         self.status = status
         self.scheduled = scheduled

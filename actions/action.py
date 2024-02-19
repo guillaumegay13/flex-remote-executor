@@ -20,7 +20,7 @@ def push_action_configuration(flexApiClient, file_path):
                 break
 
     print(f"Updating configuration of action ID {actionId}...")
-    flexApiClient.push_action_configuration(file_path, actionId, "action")
+    flexApiClient.push_object_configuration(file_path, actionId, "action")
 
 def pull_action_configuration(flexApiClient, file_path):
     with open(file_path, 'r') as file:

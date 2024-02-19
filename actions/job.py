@@ -26,18 +26,20 @@ def create_job(flexApiClient, file_path):
     with open(file_path, 'w') as file:
         file.writelines(lines)
 
-def update_job(flexApiClient, file_path):
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-        for line in lines:
-            if 'lastJobId : ' in line:
-                lastJobId = line.strip().split('lastJobId : ')[1]
+def push_job_configuration(flexApiClient, file_path, job_id = None):
+    if not job_id:
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+            for line in lines:
+                if 'lastJobId : ' in line:
+                    lastJobId = line.strip().split('lastJobId : ')[1]
+                    job_id = lastJobId
+        
+        if not lastJobId:
+            raise Exception("Last Job ID not found. Please create a new job first!")
     
-    if not lastJobId:
-        raise Exception("Last Job ID not found. Please create a new job first!")
-    
-    print(f"Updating job ID {lastJobId}...")
-    flexApiClient.update_config(file_path, lastJobId, "job")
+    print(f"Updating job ID {job_id}...")
+    flexApiClient.push_object_configuration(file_path, job_id, "job")
 
 def retry_last_job(flexApiClient, file_path):
     with open(file_path, 'r') as file:
@@ -52,15 +54,17 @@ def retry_last_job(flexApiClient, file_path):
     print(f"Retrying job ID {lastJobId}...")
     flexApiClient.retry_job(lastJobId)
 
-def cancel_job(flexApiClient, file_path):
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-    for line in lines:
-        if 'lastJobId : ' in line:
-            lastJobId = line.strip().split('lastJobId : ')[1]
+def cancel_job(flexApiClient, file_path = None, job_id = None):
+    if not job_id:
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+        for line in lines:
+            if 'lastJobId : ' in line:
+                lastJobId = line.strip().split('lastJobId : ')[1]
+                job_id = lastJobId
+        
+        if not lastJobId:
+            raise Exception("Last Job ID not found. Please create a new job first!")
     
-    if not lastJobId:
-        raise Exception("Last Job ID not found. Please create a new job first!")
-    
-    print(f"Cancelling job ID {lastJobId}...")
-    flexApiClient.cancel_job(lastJobId)
+    print(f"Cancelling job ID {job_id}...")
+    flexApiClient.cancel_job(job_id)
