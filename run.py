@@ -61,7 +61,7 @@ def main():
 
     # metadata_migration_tracker.get_jobs_errors("rs2i-xml-import", "status=Failed;createdFrom=08 Feb 2024")
 
-    metadata_migration_tracker.get_assets_full("variant=MDA;name=MDA4354")
+    metadata_migration_tracker.get_assets_full("variant=MDA;metadataDefinitionId=884;metadata=archive-tier:44097265")
 
 def extract_published_assets(metadata_migration_tracker):
     pho_metadata_definition_id = 972

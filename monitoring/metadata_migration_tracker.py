@@ -2,6 +2,7 @@ import pandas as pd
 from datetime import datetime
 import os
 from objects.flex_objects import FlexJob
+import json
 
 class MetadataMigrationTracker:
     def __init__(self, flex_api_client):
@@ -160,5 +161,10 @@ class MetadataMigrationTracker:
         self.create_empty_directory('exports/assets/')
 
         df = pd.DataFrame(asset_list_dict)
-        print(f"index = {df.columns}")
-        df.to_csv(f'exports/assets/{filename}', columns=['id', 'name'], sep=';', index=False)
+
+        json_struct = json.loads(df.to_json(orient="records"))    
+        df_flat = pd.json_normalize(json_struct)
+
+        print(f"index = {df_flat.columns}")
+
+        df_flat.to_csv(f'exports/assets/{filename}', columns=['id', 'name', 'assetContext.formatContext.preferredDropFrame', 'assetContext.formatContext.preferredStartTimecode'], sep=';', index=False)
