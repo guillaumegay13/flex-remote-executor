@@ -148,3 +148,17 @@ class MetadataMigrationTracker:
         df.to_csv(f'exports/jobs/{filename}', columns=['id', 'name', 'status', 'error'], sep=';', index=False)
 
         return job_id_list_to_retry
+    
+    def get_assets_full(self, filters):
+
+        asset_list_dict = self.flex_api_client.get_assets_by_filters_full(filters)
+
+        # data = [{'id': asset["id"], 'name': asset["name"], 'preferred_start_tc': asset["assetContext"]["formatContext"]["preferredStartTimecode"], 'preferred_drop_frame': asset["assetContext"]["formatContext"]["preferredDropFrame"]} for asset in asset_list_dict]
+
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        filename = f"assets_{timestamp}.csv"
+        self.create_empty_directory('exports/assets/')
+
+        df = pd.DataFrame(asset_list_dict)
+        print(f"index = {df.columns}")
+        df.to_csv(f'exports/assets/{filename}', columns=['id', 'name'], sep=';', index=False)

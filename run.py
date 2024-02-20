@@ -57,9 +57,11 @@ def main():
 
     # cancel_failed_jobs(metadata_migration_tracker, flex_api_client, "rs2i-xml-import", "status=Failed;createdFrom=08 Feb 2024", ["No valid source file location specified"])
 
-    extract_published_assets(metadata_migration_tracker)
+    # extract_published_assets(metadata_migration_tracker)
 
     # metadata_migration_tracker.get_jobs_errors("rs2i-xml-import", "status=Failed;createdFrom=08 Feb 2024")
+
+    metadata_migration_tracker.get_assets_full("variant=MDA;name=MDA4354")
 
 def extract_published_assets(metadata_migration_tracker):
     pho_metadata_definition_id = 972

@@ -433,7 +433,7 @@ class FlexApiClient:
         """Get assets."""
         """Supports the offset until 10000 results, and pagination on created dates if it is required (metadata filters)."""
         # Set variables
-        limit = 500
+        limit = 100
         if not pagination_delta_in_days:
             pagination_delta_in_days = 10
 
@@ -518,5 +518,82 @@ class FlexApiClient:
             response.raise_for_status()
             response_json = response.json()
             return response_json
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def get_assets_by_filters_full(self, filters, offset = 0, pagination=False, createdFrom=None, createdTo=None, pagination_delta_in_days=None):
+        """Get assets."""
+        """Return a list of dict."""
+        """Supports the offset until 10000 results, and pagination on created dates if it is required (metadata filters)."""
+        # Set variables
+        limit = 100
+        if not pagination_delta_in_days:
+            pagination_delta_in_days = 10
+
+        # End condition
+        if createdFrom and datetime.now() < datetime.strptime(createdFrom, '%d %b %Y'):
+            # if current_datetime < createdFromAsDate
+            # createdFrom date cannot be a future date : return an empy list.
+            parsed_current_date = datetime.now().strftime('%d %b %Y')
+            print(f"createdFrom is later that the current date : createdFrom={createdFrom}, current_date={parsed_current_date}")
+            # No asset can be found
+            return []
+        
+        # Set up creation date filters for pagination in the endpoint
+        if createdFrom and createdTo:
+            endpoint = f"/assets;{filters};offset={offset};createdFrom={createdFrom};createdTo={createdTo}"
+        else:
+            endpoint = f"/assets;{filters};offset={offset}"
+
+        # Retrieve assets
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            response_json = response.json()
+            response_assets = response_json["assets"]
+            total_results = response_json["totalCount"]
+
+            print(f"Found {total_results} assets with filters {filters}, offset {offset}, createdFrom {createdFrom}, createdTo {createdTo}")
+
+            asset_list = []
+            asset_list.extend(response_assets)
+
+            if (total_results > 10000 and "metadata" in filters):
+                # Activate pagination
+                if "created" not in filters:
+                    # if not createdTo is equivalent to if not pagination
+                    if not pagination:
+                        # Init created - 1st of Sept. 2023
+                        from_date = datetime(2023, 9, 1)
+                        createdFrom = from_date.strftime('%d %b %Y')
+                        new_createdTo = from_date + timedelta(days=pagination_delta_in_days)
+                        createdTo = new_createdTo.strftime('%d %b %Y')
+                        asset_list.extend(self.get_assets_by_filters_full(filters, 0, True, createdFrom, createdTo))
+                    else:
+                        # if pagination and total_results > 10000, divide the pagination delta by 2
+                        pagination_delta_in_days //= 2
+                        print(f"Reducing the pagination delta to {pagination_delta_in_days}")
+                        parsed_createdTo = datetime.strptime(createdTo, '%d %b %Y')
+                        # Add days for the pagination
+                        new_createdTo = parsed_createdTo - timedelta(days=pagination_delta_in_days)
+                        createdTo = new_createdTo.strftime('%d %b %Y')
+                        asset_list.extend(self.get_assets_by_filters_full(filters, 0, True, createdFrom, createdTo))
+                else:
+                    raise Exception("Unable to paginate on the creation date filters as there query already contains a creation date filter.")
+
+            elif (total_results > offset + limit):
+                # Set new offset
+                asset_list.extend(self.get_assets_by_filters_full(filters, offset + limit, pagination, createdFrom, createdTo))
+                    
+            elif pagination:
+                # Set new pagination creation date filters
+                createdFrom = createdTo
+                parsed_date = datetime.strptime(createdTo, '%d %b %Y')
+                # Add days for the pagination
+                new_date = parsed_date + timedelta(days=pagination_delta_in_days)
+                createdTo = new_date.strftime('%d %b %Y')
+                asset_list.extend(self.get_assets_by_filters_full(filters, 0, True, createdFrom, createdTo))
+
+            return asset_list
         except requests.RequestException as e:
             raise Exception(e)
