@@ -59,7 +59,7 @@ class FlexApiClient:
             response = requests.get(self.base_url + endpoint, headers=self.headers)
             response.raise_for_status()
             response_json = response.json()
-            job_list = []
+            job_list = response_json["jobs"]
             for job in response_json["jobs"]:
                 flex_job = FlexInstance(job["id"], None, job["name"], None, job["objectType"]["id"], job["objectType"]["name"], job["status"], job["scheduled"], job["created"])
                 job_list.append(flex_job)
@@ -68,6 +68,26 @@ class FlexApiClient:
             total_results = response_json["totalCount"]
             if (total_results > offset + 100):
                 job_list.extend(self.get_jobs_by_filter(filters, offset + 100))
+
+            return job_list
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+
+    def get_jobs_by_filter_df(self, filters, offset = 0):
+        """Get jobs."""
+        endpoint = f"/jobs;{filters};offset={offset}"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            response_json = response.json()
+            job_list = []
+            job_list.extend(response_json["jobs"])
+
+            # default limit is 100
+            total_results = response_json["totalCount"]
+            if (total_results > offset + 100):
+                job_list.extend(self.get_jobs_by_filter_df(filters, offset + 100))
 
             return job_list
         except requests.RequestException as e:
@@ -285,13 +305,13 @@ class FlexApiClient:
 
             insert_index = 0
             if 'GroovyScriptContext context' in file_content and 'FlexSdkClient flexSdkClient' in file_content:
-                data_to_insert = f"""\n\n\t/**\n\tcreated : {datetime.date.today()}\n\tname : {actionName}\n\tactionId : {actionId}\n\tactionUuid : {actionUuid}\n\t**/\n\n"""
+                data_to_insert = f"""\n\n\t/**\n\tcreated : {datetime.now()}\n\tname : {actionName}\n\tactionId : {actionId}\n\tactionUuid : {actionUuid}\n\t**/\n\n"""
                 for i, line in enumerate(lines):
                     if 'FlexSdkClient flexSdkClient' in line.strip():
                         insert_index = i + 1
                         break
             else:
-                data_to_insert = f"""\n\n/**\ncreated : {datetime.date.today()}\nname : {actionName}\nactionId : {actionId}\nactionUuid : {actionUuid}\n**/\n\n"""
+                data_to_insert = f"""\n\n/**\ncreated : {datetime.now()}\nname : {actionName}\nactionId : {actionId}\nactionUuid : {actionUuid}\n**/\n\n"""
                 # Find the end of the import statements
                 for i, line in enumerate(lines):
                     if not line.strip().startswith('import') and line.strip() != '':
@@ -356,7 +376,8 @@ class FlexApiClient:
             payload = {
                         'action': 'retry'
                     }
-                
+            
+            print(f"Retrying job ID {jobId}")
             response = requests.post(self.base_url + endpoint, json=payload, headers=self.headers)
             response.raise_for_status()
 
@@ -496,7 +517,6 @@ class FlexApiClient:
             elif (total_results > offset + limit):
                 # Set new offset
                 asset_list.extend(self.get_assets_by_filters(filters, offset + limit, pagination, createdFrom, createdTo))
-                    
             elif pagination:
                 # Set new pagination creation date filters
                 createdFrom = createdTo

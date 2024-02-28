@@ -22,7 +22,7 @@ class MetadataMigrationTracker:
             filters += f";actionId={action_id};actionType={action_type}"
         else: 
             filters = f"actionId={action_id};actionType={action_type}"
-        job_list = self.flex_api_client.get_jobs_by_filter(filters)
+        job_list = self.flex_api_client.get_jobs_by_filter_df(filters)
 
         print(f"Fetched {len(job_list)} jobs")
 
@@ -30,16 +30,15 @@ class MetadataMigrationTracker:
         data = []
         
         for job in job_list:
-            job_history = self.flex_api_client.get_job_history(job.id)
+            job_history = self.flex_api_client.get_job_history(job["id"])
             for event in job_history["events"]:
                 if event["eventType"] == "Failed":
                     exception_message = event["exceptionMessage"]
                     error = exception_message.split("\n")[0].replace('Exception: ', '')
-                    job.error = error
-                    data.append({'id': job.id, 'name': job.name, 'status': job.status, 'error': job.error})
+                    data.append({'id': job["id"], 'name': job["name"], 'status': job["status"], 'error': error})
                     for targetted_error in errors:
                         if targetted_error in error:
-                            job_id_list_to_retry.append(job.id)
+                            job_id_list_to_retry.append(job["id"])
         
         df = pd.DataFrame(data)
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -48,6 +47,20 @@ class MetadataMigrationTracker:
         df.to_csv(f'exports/jobs/{filename}', columns=['id', 'status', 'error'], sep=';', index=False)
 
         return job_id_list_to_retry
+    
+    def extract_jobs(self, filters = None):
+        job_list = self.flex_api_client.get_jobs_by_filter_df(filters)
+
+        print(f"Fetched {len(job_list)} jobs")
+
+        df = pd.DataFrame(job_list)
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        filename = f"jobs_{timestamp}.csv"
+        self.create_empty_directory('exports/jobs/')
+
+        json_struct = json.loads(df.to_json(orient="records"))    
+        df_flat = pd.json_normalize(json_struct)
+        df_flat.to_csv(f'exports/jobs/{filename}', columns=['id', 'name', 'status', 'created', 'workflow.displayName'], sep=';', index=False)
 
     """
     Extract a list of workflows information as CSV.
@@ -106,7 +119,7 @@ class MetadataMigrationTracker:
             df = pd.DataFrame(data)
             df.to_csv(f'exports/assets/{filename}', columns=['id', 'name'], sep=';', index=False)
 
-    def get_metadata_migration_errors(self, workflow_definition_name, filters = None, errors = []):
+    def get_jobs_by_errors(self, workflow_definition_name, filters = None, errors = []):
 
         workflow_definition_id = self.flex_api_client.get_workflow_definition_id(workflow_definition_name)
         if filters:

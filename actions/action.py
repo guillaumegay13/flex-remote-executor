@@ -5,7 +5,7 @@ def create_action(flexApiClient, file_path, actionName, accountId):
     actionId = createActionResponse["id"]
 
     print("Updating action config...")
-    flexApiClient.push_action_configuration(file_path, actionId, "action")
+    flexApiClient.push_object_configuration(file_path, actionId, "action")
 
     print("Enabling action...")
     flexApiClient.enable_action(actionId)
