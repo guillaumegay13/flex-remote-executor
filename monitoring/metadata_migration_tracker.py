@@ -48,6 +48,15 @@ class MetadataMigrationTracker:
 
         return job_id_list_to_retry
     
+    def export(self, type, filters = None):
+        print(f"Exporting {type} with filters {filters}")
+        match type:
+            case "jobs":
+                self.export_jobs(filters)
+                return
+            case _:
+                print(f"type {type} is not yet supported!")
+    
     def export_jobs(self, filters = None):
         job_list = self.flex_api_client.get_jobs_by_filter_df(filters, 0, 200)
 

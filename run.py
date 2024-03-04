@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys
 import os
 from client.flex_api_client import FlexApiClient
@@ -9,8 +11,19 @@ from configurations.workflow_migrator import WorfklowMigrator
 from configurations.metadata_definition_comparator import MetadataDefinitionComparator
 from monitoring.metadata_migration_tracker import MetadataMigrationTracker
 import time
+import argparse
 
 def main():
+
+    parser = argparse.ArgumentParser(description='Flex Remote Executor (FRE) allows you to run commands remotely from your local terminal to Flex.')
+    subparsers = parser.add_subparsers(help='Commands')
+
+
+    export_command = subparsers.add_parser('export', help='Export objects to a CSV.')
+    export_command.add_argument('--type', type=str, help='Object type : jobs, assets, workflows, etc.')
+    export_command.add_argument('--filters', type=str, help='Export filters to apply. Example : "status=Failed"')
+
+    args = parser.parse_args()
 
     baseUrl = os.environ.get('FRE_SOURCE_BASE_URL')
     username = os.environ.get('FRE_SOURCE_USERNAME')
@@ -29,6 +42,12 @@ def main():
     flex_api_client = FlexApiClient(baseUrl, username, password)
 
     metadata_migration_tracker = MetadataMigrationTracker(flex_api_client)
+
+    type = args.type
+    filters = args.filters
+
+    metadata_migration_tracker.export(type, filters)
+
     # metadata_migration_tracker.get_metadata_migration_jobs("parse-rs2i-xml", "createdFrom=08 Feb 2024 14:40:00")
 
     # metadata_migration_tracker.extract_jobs("status=Pending")
@@ -61,8 +80,6 @@ def main():
     # retry_failed_jobs(flex_api_client, "parse-rs2i-xml", "status=Failed")
 
     # cancel_failed_jobs(flex_api_client, "rs2i-xml-import", "status=Failed")
-
-    metadata_migration_tracker.export_jobs("status=Failed")
 
     # extract_published_assets(metadata_migration_tracker)
 
