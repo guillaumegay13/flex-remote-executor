@@ -48,8 +48,8 @@ class MetadataMigrationTracker:
 
         return job_id_list_to_retry
     
-    def extract_jobs(self, filters = None):
-        job_list = self.flex_api_client.get_jobs_by_filter_df(filters)
+    def export_jobs(self, filters = None):
+        job_list = self.flex_api_client.get_jobs_by_filter_df(filters, 0, 200)
 
         print(f"Fetched {len(job_list)} jobs")
 

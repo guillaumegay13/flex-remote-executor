@@ -60,11 +60,13 @@ def main():
     
     # retry_failed_jobs(flex_api_client, "parse-rs2i-xml", "status=Failed")
 
-    cancel_failed_jobs(flex_api_client, "rs2i-xml-import", "status=Failed")
+    # cancel_failed_jobs(flex_api_client, "rs2i-xml-import", "status=Failed")
+
+    metadata_migration_tracker.export_jobs("status=Failed")
 
     # extract_published_assets(metadata_migration_tracker)
 
-    metadata_migration_tracker.get_jobs_errors("rs2i-xml-import", "status=Failed")
+    # metadata_migration_tracker.get_jobs_errors("rs2i-xml-import", "status=Failed")
 
     # metadata_migration_tracker.get_assets_full("variant=MDA;metadataDefinitionId=884;metadata=archive-tier:44097265")
 
@@ -89,7 +91,7 @@ def retry_failed_jobs_from_workflow(metadata_migration_tracker, flex_api_client,
         if script_path:
             push_job_configuration(flex_api_client, script_path, job_id)
         flex_api_client.retry_job(job_id)
-        # time.sleep(0.05)
+        time.sleep(1)
 
 def cancel_failed_jobs(flex_api_client, action_name, filters = None, errors = None):
     action_name = action_name

@@ -3,6 +3,12 @@ import base64
 import datetime
 from objects.flex_objects import FlexInstance, FlexAsset
 from datetime import datetime, timedelta
+import sys
+
+# Increase default recursion limit (from 999 to 1500)
+# See : https://stackoverflow.com/questions/14222416/recursion-in-python-runtimeerror-maximum-recursion-depth-exceeded-while-callin
+# max_number_of_objects_to_retrieve = limit * recursion_limit
+sys.setrecursionlimit(1500)
 
 class FlexApiClient:
     def __init__(self, base_url, username, password):
@@ -74,7 +80,7 @@ class FlexApiClient:
             raise Exception(e)
         
 
-    def get_jobs_by_filter_df(self, filters, offset = 0):
+    def get_jobs_by_filter_df(self, filters, offset = 0, limit = 100):
         """Get jobs."""
         endpoint = f"/jobs;{filters};offset={offset}"
         try:
@@ -86,8 +92,8 @@ class FlexApiClient:
 
             # default limit is 100
             total_results = response_json["totalCount"]
-            if (total_results > offset + 100):
-                job_list.extend(self.get_jobs_by_filter_df(filters, offset + 100))
+            if (total_results > offset + limit):
+                job_list.extend(self.get_jobs_by_filter_df(filters, offset + limit))
 
             return job_list
         except requests.RequestException as e:
