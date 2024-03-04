@@ -48,17 +48,8 @@ class MetadataMigrationTracker:
 
         return job_id_list_to_retry
     
-    def export(self, type, filters = None):
-        print(f"Exporting {type} with filters {filters}")
-        match type:
-            case "jobs":
-                self.export_jobs(filters)
-                return
-            case _:
-                print(f"type {type} is not yet supported!")
-    
     def export_jobs(self, filters = None):
-        job_list = self.flex_api_client.get_jobs_by_filter_df(filters, 0, 200)
+        job_list = self.flex_api_client.get_jobs_by_filter_df(filters, 0, 500)
 
         print(f"Fetched {len(job_list)} jobs")
 
@@ -190,3 +181,18 @@ class MetadataMigrationTracker:
         print(f"index = {df_flat.columns}")
 
         df_flat.to_csv(f'exports/assets/{filename}', columns=['id', 'name', 'assetContext.formatContext.preferredDropFrame', 'assetContext.formatContext.preferredStartTimecode'], sep=';', index=False)
+
+    def export(self, type, filters = None):
+        job_list = self.flex_api_client.get_objects_by_filters(type, filters, 500)
+
+        print(f"Fetched {len(job_list)} jobs")
+
+        df = pd.DataFrame(job_list)
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        filename = f"jobs_{timestamp}.csv"
+        self.create_empty_directory('exports/jobs/')
+
+        json_struct = json.loads(df.to_json(orient="records"))
+        df_flat = pd.json_normalize(json_struct)
+        print(f"Creating export file {filename}")
+        df_flat.to_csv(f'exports/jobs/{filename}', columns=['id', 'name', 'status', 'created', 'workflow.displayName'], sep=';', index=False)
