@@ -12,22 +12,33 @@ from configurations.metadata_definition_comparator import MetadataDefinitionComp
 from monitoring.metadata_migration_tracker import MetadataMigrationTracker
 import time
 import argparse
+import os
+
+
+BASE_URL = os.environ.get('FRE_SOURCE_BASE_URL')
+USERNAME = os.environ.get('FRE_SOURCE_USERNAME')
+PASSWORD = os.environ.get('FRE_SOURCE_PASSWORD')
 
 def main():
 
     parser = argparse.ArgumentParser(description='Flex Remote Executor (FRE) allows you to run commands remotely from your local terminal to Flex.')
     subparsers = parser.add_subparsers(help='Commands')
 
-
+    # Export
     export_command = subparsers.add_parser('export', help='Export objects to a CSV.')
     export_command.add_argument('--type', type=str, help='Object type : jobs, assets, workflows, etc.')
     export_command.add_argument('--filters', type=str, help='Export filters to apply. Example : "status=Failed"')
+    export_command.set_defaults(func=export)
+
+
+    # Retry
+    export_command = subparsers.add_parser('retry', help='Retry failed jobs.')
+    export_command.add_argument('--type', type=str, help='Object type : jobs, assets, workflows, etc.')
+    export_command.add_argument('--name', type=str, help='Object name : action name, workflow definition name.')
+    export_command.add_argument('--filters', type=str, help='Filters to apply. Example : "status=Failed"')
+    export_command.set_defaults(func=retry)
 
     args = parser.parse_args()
-
-    baseUrl = os.environ.get('FRE_SOURCE_BASE_URL')
-    username = os.environ.get('FRE_SOURCE_USERNAME')
-    password = os.environ.get('FRE_SOURCE_PASSWORD')
 
     #metadataDefinitionName = "Photo  PHO"
             
@@ -39,14 +50,14 @@ def main():
     # metadataDefinitionComparator = MetadataDefinitionComparator(baseUrl, username, password, target_base_url, target_username, target_password)
     # metadataDefinitionComparator.compare_metadata_definitions(metadataDefinitionName)
 
-    flex_api_client = FlexApiClient(baseUrl, username, password)
+    if hasattr(args, 'func'):
+        # Call the function associated with the command
+        args.func(args)
+    else:
+        # No command was provided, so you can print the help message
+        parser.print_help()
 
-    metadata_migration_tracker = MetadataMigrationTracker(flex_api_client)
-
-    type = args.type
-    filters = args.filters
-
-    metadata_migration_tracker.export(type, filters)
+    # retry_failed_jobs(flex_api_client, "parse-rs2i-xml", "status=Failed")
 
     # metadata_migration_tracker.get_metadata_migration_jobs("parse-rs2i-xml", "createdFrom=08 Feb 2024 14:40:00")
 
@@ -77,8 +88,6 @@ def main():
 
     # retry_failed_jobs_from_workflow(metadata_migration_tracker, flex_api_client, "RS2i Metadata Migration", f"status=Failed")
     
-    # retry_failed_jobs(flex_api_client, "parse-rs2i-xml", "status=Failed")
-
     # cancel_failed_jobs(flex_api_client, "rs2i-xml-import", "status=Failed")
 
     # extract_published_assets(metadata_migration_tracker)
@@ -86,6 +95,54 @@ def main():
     # metadata_migration_tracker.get_jobs_errors("rs2i-xml-import", "status=Failed")
 
     # metadata_migration_tracker.get_assets_full("variant=MDA;metadataDefinitionId=884;metadata=archive-tier:44097265")
+
+def export(args):
+    
+    flex_api_client = FlexApiClient(BASE_URL, USERNAME, PASSWORD)
+
+    metadata_migration_tracker = MetadataMigrationTracker(flex_api_client)
+
+    type = args.type
+    filters = args.filters
+
+    metadata_migration_tracker.export(type, filters, True)
+
+def retry(args):
+    
+    flex_api_client = FlexApiClient(BASE_URL, USERNAME, PASSWORD)
+
+    # metadata_migration_tracker = MetadataMigrationTracker(flex_api_client)
+
+    type = args.type
+
+    # Only failed objects can be retried
+    if getattr(args, 'filters', None):
+        filters = args.filters
+        if 'status' not in filters:
+            filters += ";status=Failed"
+    else:
+        filters = "status=Failed"
+    
+    if getattr(args, 'name', None):
+        name = args.name
+        action_name = name
+        action_id = flex_api_client.get_action_id(action_name)
+        action = flex_api_client.get_action(action_id)
+        action_type = action["type"]["name"]
+        if filters:
+            filters += f";actionId={action_id};actionType={action_type}"
+        else: 
+            filters = f"actionId={action_id};actionType={action_type}"
+    
+    job_list = flex_api_client.get_jobs_by_filter_df(filters)
+
+    print(f"Number of jobs to retry : {len(job_list)}")
+
+    for job in job_list:
+        job_id = job["id"]
+        flex_api_client.retry_job(job_id)
+        time.sleep(0.1)
+
 
 def extract_published_assets(metadata_migration_tracker):
     pho_metadata_definition_id = 972

@@ -182,10 +182,21 @@ class MetadataMigrationTracker:
 
         df_flat.to_csv(f'exports/assets/{filename}', columns=['id', 'name', 'assetContext.formatContext.preferredDropFrame', 'assetContext.formatContext.preferredStartTimecode'], sep=';', index=False)
 
-    def export(self, type, filters = None):
-        job_list = self.flex_api_client.get_objects_by_filters(type, filters, 500)
-
+    def export(self, type, filters = None, include_error = None):
+        job_list = self.flex_api_client.get_objects_by_filters(type, filters, 100)
+        columns=['id', 'name', 'status', 'created', 'workflow.displayName']
         print(f"Fetched {len(job_list)} jobs")
+
+        if include_error:
+            columns.append('exceptionMessage')
+            for job in job_list:
+                job_history = self.flex_api_client.get_job_history(job["id"])
+                for event in job_history["events"]:
+                    if event["eventType"] == "Failed":
+                        exception_message = event["exceptionMessage"]
+                        error = exception_message.split("\n")[0].replace('Exception: ', '')
+                        job["exceptionMessage"] = error
+
 
         df = pd.DataFrame(job_list)
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -194,5 +205,9 @@ class MetadataMigrationTracker:
 
         json_struct = json.loads(df.to_json(orient="records"))
         df_flat = pd.json_normalize(json_struct)
-        print(f"Creating export file {filename}")
-        df_flat.to_csv(f'exports/jobs/{filename}', columns=['id', 'name', 'status', 'created', 'workflow.displayName'], sep=';', index=False)
+
+        file_path = os.path.join(os.getcwd(), f'exports/jobs/{filename}')
+        print(f"Creating export file {filename} in {file_path}")
+            
+        df_flat.to_csv(f'exports/jobs/{filename}', columns=columns, sep=';', index=False)
+        print(f"{file_path} created!")
