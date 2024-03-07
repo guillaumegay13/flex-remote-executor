@@ -30,13 +30,19 @@ def main():
     export_command.add_argument('--filters', type=str, help='Export filters to apply. Example : "status=Failed"')
     export_command.set_defaults(func=export)
 
-
     # Retry
     export_command = subparsers.add_parser('retry', help='Retry failed jobs.')
     export_command.add_argument('--type', type=str, help='Object type : jobs, assets, workflows, etc.')
     export_command.add_argument('--name', type=str, help='Object name : action name, workflow definition name.')
     export_command.add_argument('--filters', type=str, help='Filters to apply. Example : "status=Failed"')
     export_command.set_defaults(func=retry)
+
+    # Cancel
+    export_command = subparsers.add_parser('cancel', help='Cancel failed jobs.')
+    export_command.add_argument('--type', type=str, help='Object type : jobs, workflows.')
+    export_command.add_argument('--name', type=str, help='Object name : action name, workflow definition name.')
+    export_command.add_argument('--filters', type=str, help='Filters to apply. Example : "status=Failed"')
+    export_command.set_defaults(func=cancel)
 
     args = parser.parse_args()
 
@@ -115,26 +121,7 @@ def retry(args):
 
     type = args.type
 
-    # Only failed objects can be retried
-    if getattr(args, 'filters', None):
-        filters = args.filters
-        if 'status' not in filters:
-            filters += ";status=Failed"
-    else:
-        filters = "status=Failed"
-    
-    if getattr(args, 'name', None):
-        name = args.name
-        action_name = name
-        action_id = flex_api_client.get_action_id(action_name)
-        action = flex_api_client.get_action(action_id)
-        action_type = action["type"]["name"]
-        if filters:
-            filters += f";actionId={action_id};actionType={action_type}"
-        else: 
-            filters = f"actionId={action_id};actionType={action_type}"
-    
-    job_list = flex_api_client.get_jobs_by_filter_df(filters)
+    job_list = get_jobs(args, flex_api_client)
 
     print(f"Number of jobs to retry : {len(job_list)}")
 
@@ -143,6 +130,21 @@ def retry(args):
         flex_api_client.retry_job(job_id)
         time.sleep(0.1)
 
+def cancel(args):
+
+    flex_api_client = FlexApiClient(BASE_URL, USERNAME, PASSWORD)
+
+    job_list = get_jobs(args, flex_api_client)
+
+    print(f"Number of jobs to cancel : {len(job_list)}")
+
+    for job in job_list:
+        job_id = job["id"]
+        try:
+            cancel_job(flex_api_client, None, job_id)
+        except Exception as e:
+            print(f"Unable to cancel job {job_id} : ", e)
+        time.sleep(0.05)
 
 def extract_published_assets(metadata_migration_tracker):
     pho_metadata_definition_id = 972
@@ -209,6 +211,29 @@ def retry_failed_jobs(flex_api_client, action_name, filters = None, errors = Non
             print(f"Unable to retry job {job_id} : ", e)
         time.sleep(1)
 
+def get_jobs(args, flex_api_client):
+    # only failed objects can be cancelled
+    if getattr(args, 'filters', None):
+        filters = args.filters
+        if 'status' not in filters:
+            filters += ";status=Failed"
+    else:
+        filters = "status=Failed"
+
+    if getattr(args, 'name', None):
+        name = args.name
+        action_name = name
+        action_id = flex_api_client.get_action_id(action_name)
+        action = flex_api_client.get_action(action_id)
+        action_type = action["type"]["name"]
+        if filters:
+            filters += f";actionId={action_id};actionType={action_type}"
+        else: 
+            filters = f"actionId={action_id};actionType={action_type}"
+
+    job_list = flex_api_client.get_jobs_by_filter_df(filters)
+
+    return job_list
 
 if __name__ == "__main__":
     main()
