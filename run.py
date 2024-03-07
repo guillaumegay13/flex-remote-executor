@@ -42,6 +42,7 @@ def main():
     export_command.add_argument('--type', type=str, help='Object type : jobs, workflows.')
     export_command.add_argument('--name', type=str, help='Object name : action name, workflow definition name.')
     export_command.add_argument('--filters', type=str, help='Filters to apply. Example : "status=Failed"')
+    export_command.add_argument('--errors', type=str, help='Error message of jobs to cancel. Example : "Resource item named"')
     export_command.set_defaults(func=cancel)
 
     args = parser.parse_args()
@@ -128,23 +129,25 @@ def retry(args):
     for job in job_list:
         job_id = job["id"]
         flex_api_client.retry_job(job_id)
-        time.sleep(0.1)
+        time.sleep(1)
 
 def cancel(args):
 
     flex_api_client = FlexApiClient(BASE_URL, USERNAME, PASSWORD)
 
-    job_list = get_jobs(args, flex_api_client)
-
-    print(f"Number of jobs to cancel : {len(job_list)}")
-
-    for job in job_list:
-        job_id = job["id"]
-        try:
-            cancel_job(flex_api_client, None, job_id)
-        except Exception as e:
-            print(f"Unable to cancel job {job_id} : ", e)
-        time.sleep(0.05)
+    if getattr(args, 'errors', None):
+        cancel_failed_jobs(flex_api_client, args)
+    else:
+        # Cancel jobs regardless of their errors
+        job_list = get_jobs(args, flex_api_client)
+        print(f"Number of jobs to cancel : {len(job_list)}")
+        for job in job_list:
+            job_id = job["id"]
+            try:
+                cancel_job(flex_api_client, None, job_id)
+            except Exception as e:
+                print(f"Unable to cancel job {job_id} : ", e)
+            time.sleep(0.05)
 
 def extract_published_assets(metadata_migration_tracker):
     pho_metadata_definition_id = 972
@@ -169,26 +172,37 @@ def retry_failed_jobs_from_workflow(metadata_migration_tracker, flex_api_client,
         flex_api_client.retry_job(job_id)
         time.sleep(1)
 
-def cancel_failed_jobs(flex_api_client, action_name, filters = None, errors = None):
-    action_name = action_name
-    action_id = flex_api_client.get_action_id(action_name)
-    action = flex_api_client.get_action(action_id)
-    action_type = action["type"]["name"]
-    if filters:
-        filters += f";actionId={action_id};actionType={action_type}"
-    else: 
-        filters = f"actionId={action_id};actionType={action_type}"
-    jobs = flex_api_client.get_jobs_by_filter_df(filters)
+def cancel_failed_jobs(flex_api_client, args):
+    errors = args.errors
+    filters = apply_default_filters(args, flex_api_client)
 
-    print(f"Number of jobs to cancel : {len(jobs)}")
+    # Get first total number of results
+    result = flex_api_client.get_jobs_batch_by_filter(filters, 0, 1)
+    total_results = result["totalCount"]
 
+    offset = 0
+    limit = 100
+    while (total_results > offset + limit):
+        print(f"Getting next jobs from {offset} to {offset + limit}")
+        jobs = flex_api_client.get_jobs_batch_by_filter(filters, offset, limit)["jobs"]
+        cancel_jobs_by_errors(jobs, flex_api_client, errors)
+        offset += limit
+
+def cancel_jobs_by_errors(jobs, flex_api_client, errors):
     for job in jobs:
         job_id = job["id"]
-        try:
-            cancel_job(flex_api_client, None, job_id)
-        except Exception as e:
-            print(f"Unable to cancel job {job_id} : ", e)
-        time.sleep(0.05)
+        job_history = flex_api_client.get_job_history(job["id"])
+        for event in job_history["events"]:
+            if event["eventType"] == "Failed":
+                exception_message = event["exceptionMessage"]
+                error = exception_message.split("\n")[0].replace('Exception: ', '')
+                for targetted_error in errors.split(','):
+                    if targetted_error in error:
+                        print(f"Found job ID {job_id} to cancel with error {error}")
+                        try:
+                            cancel_job(flex_api_client, None, job_id)
+                        except Exception as e:
+                            print(f"Unable to cancel job {job_id}")
 
 def retry_failed_jobs(flex_api_client, action_name, filters = None, errors = None):
     action_name = action_name
@@ -234,6 +248,29 @@ def get_jobs(args, flex_api_client):
     job_list = flex_api_client.get_jobs_by_filter_df(filters)
 
     return job_list
+
+def apply_default_filters(args, flex_api_client):
+    # only failed objects can be cancelled
+    if getattr(args, 'filters', None):
+        filters = args.filters
+        if 'status' not in filters:
+            filters += ";status=Failed"
+    else:
+        filters = "status=Failed"
+
+    if getattr(args, 'name', None):
+        name = args.name
+        action_name = name
+        action_id = flex_api_client.get_action_id(action_name)
+        action = flex_api_client.get_action(action_id)
+        action_type = action["type"]["name"]
+        if filters:
+            filters += f";actionId={action_id};actionType={action_type}"
+        else: 
+            filters = f"actionId={action_id};actionType={action_type}"
+            
+    return filters
+
 
 if __name__ == "__main__":
     main()

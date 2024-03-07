@@ -58,7 +58,7 @@ class FlexApiClient:
         except requests.RequestException as e:
             raise Exception(e)
     
-    def get_jobs_by_filter(self, filters, offset = 0):
+    def get_jobs_by_filter(self, filters, offset = 0, limit = 100):
         """Get jobs."""
         endpoint = f"/jobs;{filters};offset={offset}"
         try:
@@ -72,13 +72,12 @@ class FlexApiClient:
 
             # default limit is 100
             total_results = response_json["totalCount"]
-            if (total_results > offset + 100):
-                job_list.extend(self.get_jobs_by_filter(filters, offset + 100))
+            if (total_results > offset + limit):
+                job_list.extend(self.get_jobs_by_filter(filters, offset + limit))
 
             return job_list
         except requests.RequestException as e:
             raise Exception(e)
-        
 
     def get_jobs_by_filter_df(self, filters, offset = 0, limit = 100):
         """Get jobs."""
@@ -96,6 +95,17 @@ class FlexApiClient:
                 job_list.extend(self.get_jobs_by_filter_df(filters, offset + limit))
 
             return job_list
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def get_jobs_batch_by_filter(self, filters, offset = 0, limit = 100):
+        """Get jobs."""
+        endpoint = f"/jobs;{filters};offset={offset}"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            response_json = response.json()
+            return response_json
         except requests.RequestException as e:
             raise Exception(e)
         
