@@ -165,7 +165,7 @@ class MetadataMigrationTracker:
     
     def get_assets_full(self, filters):
 
-        asset_list_dict = self.flex_api_client.get_assets_by_filters_full(filters)
+        asset_list_dict = self.flex_api_client.get_objects_by_filters("assets", filters, 100)
 
         # data = [{'id': asset["id"], 'name': asset["name"], 'preferred_start_tc': asset["assetContext"]["formatContext"]["preferredStartTimecode"], 'preferred_drop_frame': asset["assetContext"]["formatContext"]["preferredDropFrame"]} for asset in asset_list_dict]
 
@@ -180,7 +180,7 @@ class MetadataMigrationTracker:
 
         print(f"index = {df_flat.columns}")
 
-        df_flat.to_csv(f'exports/assets/{filename}', columns=['id', 'name', 'assetContext.formatContext.preferredDropFrame', 'assetContext.formatContext.preferredStartTimecode'], sep=';', index=False)
+        df_flat.to_csv(f'exports/assets/{filename}', columns=['id', 'name', 'assetOrigin', 'referenceName', 'fileInformation.originalFileName'], sep=';', index=False)
 
     def export(self, type, filters = None, include_error = None):
         job_list = self.flex_api_client.get_objects_by_filters(type, filters, 100)

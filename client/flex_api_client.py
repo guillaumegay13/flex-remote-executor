@@ -562,7 +562,7 @@ class FlexApiClient:
         """Return a list of dict."""
         """Supports the offset until 10000 results, and pagination on created dates if it is required (metadata filters)."""
         # Set variables
-        limit = 100
+        limit = 500
         if not pagination_delta_in_days:
             pagination_delta_in_days = 10
 
@@ -701,6 +701,98 @@ class FlexApiClient:
                 createdTo = new_date.strftime('%d %b %Y')
                 object_list.extend(self.get_objects_by_filters(type, filters, limit, 0, True, createdFrom, createdTo))
 
+            return object_list
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def get_total_results(self, type, filters):
+        """Get the total number of results."""
+        endpoint = f"/{type};{filters};limit=1"
+        # Retrieve objects
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            response_json = response.json()
+            object_list = response_json[type]
+            total_results = response_json["totalCount"]
+            return total_results
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def retry_workflow(self, workflowId):
+        """Retry a workflow."""
+        endpoint = f"/workflows/{workflowId}/actions"
+        try:
+            workflowStatus = self.get_workflow(workflowId)["status"]
+
+            if workflowStatus != "Failed":
+                raise Exception(f"Couldn't retry the job as it is not Failed, its status is : {workflowStatus}")
+
+            payload = {
+                        'action': 'retry'
+                    }
+            
+            print(f"Retrying workflow ID {workflowId}")
+            response = requests.post(self.base_url + endpoint, json=payload, headers=self.headers)
+            response.raise_for_status()
+
+            return response.json()
+        except requests.RequestException as e:
+            print(f"Couldn't retry job ID {workflowId} :", e)
+
+    def get_workflow(self, workflowId):
+        """Get a workflow."""
+        endpoint = f"/workflows/{workflowId}"
+        try:
+                
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def get_instance(self, instanceId, type):
+        """Get an instance."""
+        endpoint = f"/{type}/{instanceId}"
+        try:
+                
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def retry_instance(self, instanceId, type):
+        """Retry an instance."""
+        endpoint = f"/{type}/{instanceId}/actions"
+        try:
+            status = self.get_instance(instanceId, type)["status"]
+
+            if status != "Failed":
+                print(f"Couldn't retry the job as it is not Failed, its status is : {status}")
+
+            payload = {
+                        'action': 'retry'
+                    }
+            
+            print(f"Retrying instance ID {instanceId}")
+            response = requests.post(self.base_url + endpoint, json=payload, headers=self.headers)
+            response.raise_for_status()
+
+            return response.json()
+        except requests.RequestException as e:
+            print(f"Couldn't retry instance ID {instanceId} :", e)
+
+    def get_next_objects(self, type, filters, offset = 0, limit = 100):
+        """Get next objects."""
+        endpoint = f"/{type};{filters};offset={offset};limit={limit}"
+
+        # Retrieve objects
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            response_json = response.json()
+            object_list = response_json[type]
             return object_list
         except requests.RequestException as e:
             raise Exception(e)

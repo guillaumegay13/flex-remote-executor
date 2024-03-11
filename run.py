@@ -27,7 +27,9 @@ def main():
     # Export
     export_command = subparsers.add_parser('export', help='Export objects to a CSV.')
     export_command.add_argument('--type', type=str, help='Object type : jobs, assets, workflows, etc.')
+    export_command.add_argument('--name', type=str, help='Object name : action name, workflow definition name.')
     export_command.add_argument('--filters', type=str, help='Export filters to apply. Example : "status=Failed"')
+    export_command.add_argument('--include_error', type=bool, help='Include the job error message if failed.')
     export_command.set_defaults(func=export)
 
     # Retry
@@ -112,24 +114,78 @@ def export(args):
     type = args.type
     filters = args.filters
 
-    metadata_migration_tracker.export(type, filters, True)
+    if type == 'jobs':
+        include_error = args.include_error
+
+        if getattr(args, 'name', None):
+            name = args.name
+            action_name = name
+            action_id = flex_api_client.get_action_id(action_name)
+            action = flex_api_client.get_action(action_id)
+            action_type = action["type"]["name"]
+            if filters:
+                filters += f";actionId={action_id};actionType={action_type}"
+            else: 
+                filters = f"actionId={action_id};actionType={action_type}"
+
+        metadata_migration_tracker.export(type, filters, include_error)
+    
+    elif type == 'assets':
+        metadata_migration_tracker.get_assets_full(filters)
 
 def retry(args):
     
     flex_api_client = FlexApiClient(BASE_URL, USERNAME, PASSWORD)
 
-    # metadata_migration_tracker = MetadataMigrationTracker(flex_api_client)
 
+    filters = args.filters
     type = args.type
 
-    job_list = get_jobs(args, flex_api_client)
+    # Only failed objects can be cancelled
+    if getattr(args, 'filters', None):
+        filters = args.filters
+        if 'status' not in filters:
+            filters += ";status=Failed"
+    else:
+        filters = "status=Failed"
 
-    print(f"Number of jobs to retry : {len(job_list)}")
+    if getattr(args, 'name', None):
+        name = args.name
 
-    for job in job_list:
-        job_id = job["id"]
-        flex_api_client.retry_job(job_id)
-        time.sleep(1)
+        if type == "jobs":
+            action_name = name
+            action_id = flex_api_client.get_action_id(action_name)
+            action = flex_api_client.get_action(action_id)
+            action_type = action["type"]["name"]
+            if filters:
+                filters += f";actionId={action_id};actionType={action_type}"
+            else: 
+                filters = f"actionId={action_id};actionType={action_type}"
+        elif type == "workflows":
+            workflow_definition_name = name
+            workflow_definition_id = flex_api_client.get_workflow_definition_id(workflow_definition_name)
+            if filters:
+                filters += f";definitionId={workflow_definition_id}"
+            else: 
+                filters = f"definitionId={workflow_definition_id}"
+
+    total_number_of_results = flex_api_client.get_total_results(type, filters)
+
+    print(f"Number of instances to retry : {total_number_of_results}")
+
+    offset = 0
+    limit = 100
+    instances_to_retry = flex_api_client.get_next_objects(type, filters, offset, limit)
+
+    while offset < total_number_of_results:
+        for instance in instances_to_retry:
+            instance_id = instance["id"]
+            flex_api_client.retry_instance(instance_id, type)
+            time.sleep(1)
+            
+        offset+=limit
+        instances_to_retry = flex_api_client.get_next_objects(type, filters, offset, limit)
+
 
 def cancel(args):
 
@@ -248,6 +304,41 @@ def get_jobs(args, flex_api_client):
     job_list = flex_api_client.get_jobs_by_filter_df(filters)
 
     return job_list
+
+def get_instances(args, flex_api_client, limit):
+
+    type = args.type
+    # only failed objects can be cancelled
+    if getattr(args, 'filters', None):
+        filters = args.filters
+        if 'status' not in filters:
+            filters += ";status=Failed"
+    else:
+        filters = "status=Failed"
+
+    if getattr(args, 'name', None):
+        name = args.name
+
+        if type == "jobs":
+            action_name = name
+            action_id = flex_api_client.get_action_id(action_name)
+            action = flex_api_client.get_action(action_id)
+            action_type = action["type"]["name"]
+            if filters:
+                filters += f";actionId={action_id};actionType={action_type}"
+            else: 
+                filters = f"actionId={action_id};actionType={action_type}"
+        elif type == "workflows":
+            workflow_definition_name = name
+            workflow_definition_id = flex_api_client.get_workflow_definition_id(workflow_definition_name)
+            if filters:
+                filters += f";definitionId={workflow_definition_id}"
+            else: 
+                filters = f"definitionId={workflow_definition_id}"
+
+    instance_list = flex_api_client.get_objects_by_filters(type, filters, limit)
+
+    return instance_list
 
 def apply_default_filters(args, flex_api_client):
     # only failed objects can be cancelled
