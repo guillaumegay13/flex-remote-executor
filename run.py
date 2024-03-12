@@ -15,15 +15,18 @@ import argparse
 import os
 import json
 
+current_file_path = os.path.abspath(__file__)
+current_dir = os.path.dirname(current_file_path)
+
 def connect(env):
-    file_path = './env.json'
+    file_path = f"{current_dir}/env.json"
+
     with open(file_path, 'a') as file:
-        pass 
-    with open(file_path, 'r') as file:
-        content = file.read()
-        if not content:
-            content = str({})
-        env_json = json.loads(content)
+        pass
+    
+    with open(file_path) as file:
+        env_json = json.load(file)
+
         if env in env_json:
             BASE_URL = env_json[env]["url"]
             USERNAME = env_json[env]["username"]
@@ -34,7 +37,7 @@ def connect(env):
             print("Environment has not been added yet. Please add it first!")
 
 def create_env(env, url, username, password):
-    file_path = './env.json'
+    file_path = f"{current_dir}/env.json"
 
     with open(file_path, 'a') as file:
         pass 
