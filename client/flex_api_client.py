@@ -4,6 +4,7 @@ import datetime
 from objects.flex_objects import FlexInstance, FlexAsset
 from datetime import datetime, timedelta
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Increase default recursion limit (from 999 to 1500)
 # See : https://stackoverflow.com/questions/14222416/recursion-in-python-runtimeerror-maximum-recursion-depth-exceeded-while-callin

@@ -3,6 +3,9 @@ from datetime import datetime
 import os
 from objects.flex_objects import FlexJob
 import json
+import time
+import concurrent.futures
+import math
 
 class MetadataMigrationTracker:
     def __init__(self, flex_api_client):
@@ -184,8 +187,16 @@ class MetadataMigrationTracker:
 
     def export(self, type, filters = None, include_error = None):
         job_list = self.flex_api_client.get_objects_by_filters(type, filters, 100)
-        columns=['id', 'name', 'status', 'created', 'workflow.displayName']
-        print(f"Fetched {len(job_list)} jobs")
+
+        columns=['id']
+        if type == "jobs":
+            columns.extend(['name', 'status', 'created', 'workflow.displayName'])
+        elif type == "workflow":
+            columns.extend(['name', 'status', 'created'])
+        elif type == "events":
+            columns.extend(['object.name', 'object.id', 'exceptionMessage'])
+
+        print(f"Fetched {len(job_list)} objects")
 
         if include_error:
             columns.append('exceptionMessage')
@@ -197,17 +208,99 @@ class MetadataMigrationTracker:
                         error = exception_message.split("\n")[0].replace('Exception: ', '')
                         job["exceptionMessage"] = error
 
-
         df = pd.DataFrame(job_list)
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         filename = f"jobs_{timestamp}.csv"
-        self.create_empty_directory('exports/jobs/')
+        self.create_empty_directory(f'exports/{type}/')
 
         json_struct = json.loads(df.to_json(orient="records"))
         df_flat = pd.json_normalize(json_struct)
 
-        file_path = os.path.join(os.getcwd(), f'exports/jobs/{filename}')
+        file_path = os.path.join(os.getcwd(), f'exports/{type}/{filename}')
         print(f"Creating export file {filename} in {file_path}")
             
-        df_flat.to_csv(f'exports/jobs/{filename}', columns=columns, sep=';', index=False)
+        df_flat.to_csv(f'exports/{type}/{filename}', columns=columns, sep=';', index=False)
+        print(f"{file_path} created!")
+
+    def export_by_batch(self, args):
+
+        filters = args.filters
+        type = args.type
+        include_error = args.include_error
+
+        columns=['id']
+        if type == "jobs":
+            columns.extend(['name', 'status', 'created', 'workflow.displayName'])
+        elif type == "workflow":
+            columns.extend(['name', 'status', 'created'])
+        elif type == "events":
+            columns.extend(['object.name', 'object.id', 'exceptionMessage'])
+        # elif type == "assets"
+
+        if getattr(args, 'name', None):
+            name = args.name
+
+            if type == "jobs":
+                action_name = name
+                action_id = self.flex_api_client.get_action_id(action_name)
+                action = self.flex_api_client.get_action(action_id)
+                action_type = action["type"]["name"]
+                if filters:
+                    filters += f";actionId={action_id};actionType={action_type}"
+                else: 
+                    filters = f"actionId={action_id};actionType={action_type}"
+            elif type == "workflows":
+                workflow_definition_name = name
+                workflow_definition_id = self.flex_api_client.get_workflow_definition_id(workflow_definition_name)
+                if filters:
+                    filters += f";definitionId={workflow_definition_id}"
+                else: 
+                    filters = f"definitionId={workflow_definition_id}"
+
+        total_number_of_results = self.flex_api_client.get_total_results(type, filters)
+
+        print(f"Number of instances to export : {total_number_of_results}")
+
+        limit = 100
+        offsets = range(0, total_number_of_results, limit)
+
+        # Using ThreadPoolExecutor to run API calls in parallel
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Create a future to URL mapping
+            futures = [executor.submit(self.flex_api_client.get_next_objects, type, filters, offset, limit) for offset in offsets]
+
+            # Collecting results as they complete
+            objects = []
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    data = future.result()
+                    objects.append(data)
+                    print(f"Data fetched with offset {data['offset']}")
+
+                    if include_error:
+                        columns.append('exceptionMessage')
+                        for object in data[f'{type}']:
+                            job_history = self.flex_api_client.get_job_history(object["id"])
+                            for event in job_history["events"]:
+                                if event["eventType"] == "Failed":
+                                    exception_message = event["exceptionMessage"]
+                                    error = exception_message.split("\n")[0].replace('Exception: ', '')
+                                    object["exceptionMessage"] = error
+                        print(f"Errors fetched with offset {data['offset']}")
+
+                except Exception as exc:
+                    print(f"An error occurred: {exc}")
+
+        df = pd.DataFrame(objects)
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        filename = f"jobs_{timestamp}.csv"
+        self.create_empty_directory(f'exports/{type}/')
+
+        json_struct = json.loads(df.to_json(orient="records"))
+        df_flat = pd.json_normalize(json_struct)
+
+        file_path = os.path.join(os.getcwd(), f'exports/{type}/{filename}')
+        print(f"Creating export file {filename} in {file_path}")
+            
+        df_flat.to_csv(f'exports/{type}/{filename}', columns=columns, sep=';', index=False)
         print(f"{file_path} created!")
