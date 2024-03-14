@@ -10,7 +10,6 @@ import math
 class MetadataMigrationTracker:
     def __init__(self, flex_api_client):
         self.flex_api_client = flex_api_client
-        self.create_empty_directory('exports')
 
     def create_empty_directory(self, directory_path):
         if not os.path.exists(directory_path):
@@ -222,7 +221,7 @@ class MetadataMigrationTracker:
         df_flat.to_csv(f'exports/{type}/{filename}', columns=columns, sep=';', index=False)
         print(f"{file_path} created!")
 
-    def export_by_batch(self, args):
+    def export_by_batch(self, args, root_dir):
 
         filters = args.filters
         type = args.type
@@ -231,8 +230,8 @@ class MetadataMigrationTracker:
         columns=['id']
         if type == "jobs":
             columns.extend(['name', 'status', 'created', 'workflow.displayName'])
-        elif type == "workflow":
-            columns.extend(['name', 'status', 'created'])
+        elif type == "workflows":
+            columns.extend(['name', 'status', 'created', 'asset.id', 'asset.name'])
         elif type == "events":
             columns.extend(['object.name', 'object.id', 'exceptionMessage'])
         # elif type == "assets"
@@ -274,33 +273,32 @@ class MetadataMigrationTracker:
             for future in concurrent.futures.as_completed(futures):
                 try:
                     data = future.result()
-                    objects.append(data)
-                    print(f"Data fetched with offset {data['offset']}")
-
-                    if include_error:
-                        columns.append('exceptionMessage')
-                        for object in data[f'{type}']:
-                            job_history = self.flex_api_client.get_job_history(object["id"])
-                            for event in job_history["events"]:
-                                if event["eventType"] == "Failed":
-                                    exception_message = event["exceptionMessage"]
-                                    error = exception_message.split("\n")[0].replace('Exception: ', '')
-                                    object["exceptionMessage"] = error
-                        print(f"Errors fetched with offset {data['offset']}")
-
+                    objects.extend(data[f'{type}'])
+                    # print(f"Data fetched with offset {data['offset']}")
                 except Exception as exc:
                     print(f"An error occurred: {exc}")
 
+        if include_error:
+            columns.append('exceptionMessage')
+            for object in data[f'{type}']:
+                job_history = self.flex_api_client.get_job_history(object["id"])
+                for event in job_history["events"]:
+                    if event["eventType"] == "Failed":
+                        exception_message = event["exceptionMessage"]
+                        error = exception_message.split("\n")[0].replace('Exception: ', '')
+                        object["exceptionMessage"] = error
+            print(f"Errors fetched with offset {data['offset']}")
+
         df = pd.DataFrame(objects)
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        filename = f"jobs_{timestamp}.csv"
-        self.create_empty_directory(f'exports/{type}/')
+        filename = f"{type}_{timestamp}.csv"
+        self.create_empty_directory(f'{root_dir}/exports/{type}/')
 
         json_struct = json.loads(df.to_json(orient="records"))
         df_flat = pd.json_normalize(json_struct)
 
-        file_path = os.path.join(os.getcwd(), f'exports/{type}/{filename}')
-        print(f"Creating export file {filename} in {file_path}")
+        file_path = f'{root_dir}/exports/{type}/{filename}'
+        # print(f"Creating export file {filename} in {file_path}")
             
-        df_flat.to_csv(f'exports/{type}/{filename}', columns=columns, sep=';', index=False)
-        print(f"{file_path} created!")
+        df_flat.to_csv(f'{file_path}', columns=columns, sep=';', index=False)
+        print(f"{filename} created!")

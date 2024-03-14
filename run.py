@@ -109,6 +109,8 @@ def main():
 
 def create(args):
 
+    start_time = time.time()
+    
     if not getattr(args, 'name', None):
         print("Please specify a name for the object to create.")
         return
@@ -134,9 +136,14 @@ def create(args):
                 print('Please specify a url, username and password value to create a new environment!')
         case _:
             print(f"{name} object cannot be created.")
+    
+    end_time = time.time()
+    duration = end_time - start_time
+    print(f"finished in {round(duration)}s.")
 
 def export(args):
 
+    start_time = time.time()
     if getattr(args, 'env', None):
         (BASE_URL, USERNAME, PASSWORD) = connect(args.env)
     else:
@@ -146,35 +153,15 @@ def export(args):
 
     metadata_migration_tracker = MetadataMigrationTracker(flex_api_client)
 
-    metadata_migration_tracker.export_by_batch(args)
+    metadata_migration_tracker.export_by_batch(args, current_dir)
 
-    """
-    type = args.type
-    filters = args.filters
-
-    if type == 'jobs':
-        include_error = args.include_error
-
-        if getattr(args, 'name', None):
-            name = args.name
-            action_name = name
-            action_id = flex_api_client.get_action_id(action_name)
-            action = flex_api_client.get_action(action_id)
-            action_type = action["type"]["name"]
-            if filters:
-                filters += f";actionId={action_id};actionType={action_type}"
-            else: 
-                filters = f"actionId={action_id};actionType={action_type}"
-
-        metadata_migration_tracker.export(type, filters, include_error)
-    
-    elif type == 'assets':
-        metadata_migration_tracker.get_assets_full(filters)
-    else:
-        metadata_migration_tracker.export(type, filters)
-    """
+    end_time = time.time()
+    duration = end_time - start_time
+    print(f"finished in {round(duration)}s.")
 
 def retry(args):
+
+    start_time = time.time()
 
     if getattr(args, 'env', None):
         (BASE_URL, USERNAME, PASSWORD) = connect(args.env)
@@ -230,8 +217,13 @@ def retry(args):
         offset+=limit
         instances_to_retry = flex_api_client.get_next_objects(type, filters, offset, limit)
 
+    end_time = time.time()
+    duration = end_time - start_time
+    print(f"finished in {round(duration)}s.")
 
 def cancel(args):
+
+    start_time = time.time()
 
     if getattr(args, 'env', None):
         (BASE_URL, USERNAME, PASSWORD) = connect(args.env)
@@ -254,28 +246,9 @@ def cancel(args):
                 print(f"Unable to cancel job {job_id} : ", e)
             time.sleep(0.05)
 
-def extract_published_assets(metadata_migration_tracker):
-    pho_metadata_definition_id = 972
-    published_taxon_id = 40107159
-    metadata_migration_tracker.get_assets(f"metadataDefinitionId={pho_metadata_definition_id};metadata=publishing-status:{published_taxon_id}", False)
-
-def extract_workflows_assets(metadata_migration_tracker, workflow_definition_name, filters):
-    metadata_migration_tracker.get_metadata_migration_workflows(workflow_definition_name, filters)
-
-def extract_failed_migration_workflow(metadata_migration_tracker, filters):
-    workflow_definition_name = "RS2i Metadata Migration"
-    metadata_migration_tracker.get_metadata_migration_workflows(workflow_definition_name, filters)
-
-def retry_failed_jobs_from_workflow(metadata_migration_tracker, flex_api_client, workflow_definition_name, filters = None, errors = None, script_path = None):
-    job_id_list_to_retry = metadata_migration_tracker.get_jobs_by_errors(workflow_definition_name, filters, errors)
-
-    print(f"Number of jobs to retry : {len(job_id_list_to_retry)}")
-
-    for job_id in job_id_list_to_retry:
-        if script_path:
-            push_job_configuration(flex_api_client, script_path, job_id)
-        flex_api_client.retry_job(job_id)
-        time.sleep(1)
+    end_time = time.time()
+    duration = end_time - start_time
+    print(f"finished in {round(duration)}s.")
 
 def cancel_failed_jobs(flex_api_client, args):
     errors = args.errors
@@ -309,27 +282,6 @@ def cancel_jobs_by_errors(jobs, flex_api_client, errors):
                         except Exception as e:
                             print(f"Unable to cancel job {job_id}")
 
-def retry_failed_jobs(flex_api_client, action_name, filters = None, errors = None):
-    action_name = action_name
-    action_id = flex_api_client.get_action_id(action_name)
-    action = flex_api_client.get_action(action_id)
-    action_type = action["type"]["name"]
-    if filters:
-        filters += f";actionId={action_id};actionType={action_type}"
-    else: 
-        filters = f"actionId={action_id};actionType={action_type}"
-    job_id_list_to_retry = flex_api_client.get_jobs_by_filter_df(filters)
-
-    print(f"Number of jobs to retry : {len(job_id_list_to_retry)}")
-
-    for job in job_id_list_to_retry:
-        job_id = job["id"]
-        try:
-            flex_api_client.retry_job(job_id)
-        except Exception as e:
-            print(f"Unable to retry job {job_id} : ", e)
-        time.sleep(1)
-
 def get_jobs(args, flex_api_client):
     # only failed objects can be cancelled
     if getattr(args, 'filters', None):
@@ -353,41 +305,6 @@ def get_jobs(args, flex_api_client):
     job_list = flex_api_client.get_jobs_by_filter_df(filters)
 
     return job_list
-
-def get_instances(args, flex_api_client, limit):
-
-    type = args.type
-    # only failed objects can be cancelled
-    if getattr(args, 'filters', None):
-        filters = args.filters
-        if 'status' not in filters:
-            filters += ";status=Failed"
-    else:
-        filters = "status=Failed"
-
-    if getattr(args, 'name', None):
-        name = args.name
-
-        if type == "jobs":
-            action_name = name
-            action_id = flex_api_client.get_action_id(action_name)
-            action = flex_api_client.get_action(action_id)
-            action_type = action["type"]["name"]
-            if filters:
-                filters += f";actionId={action_id};actionType={action_type}"
-            else: 
-                filters = f"actionId={action_id};actionType={action_type}"
-        elif type == "workflows":
-            workflow_definition_name = name
-            workflow_definition_id = flex_api_client.get_workflow_definition_id(workflow_definition_name)
-            if filters:
-                filters += f";definitionId={workflow_definition_id}"
-            else: 
-                filters = f"definitionId={workflow_definition_id}"
-
-    instance_list = flex_api_client.get_objects_by_filters(type, filters, limit)
-
-    return instance_list
 
 def apply_default_filters(args, flex_api_client):
     # only failed objects can be cancelled

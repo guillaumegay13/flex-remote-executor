@@ -793,7 +793,7 @@ class FlexApiClient:
             response = requests.get(self.base_url + endpoint, headers=self.headers)
             response.raise_for_status()
             response_json = response.json()
-            object_list = response_json[type]
-            return object_list
+            # object_list = response_json[type]
+            return response_json
         except requests.RequestException as e:
             raise Exception(e)
