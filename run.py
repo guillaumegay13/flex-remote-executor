@@ -9,11 +9,13 @@ from actions.job import create_job, push_job_configuration, retry_last_job, canc
 from actions.file import create_file
 from configurations.workflow_migrator import WorfklowMigrator
 from configurations.metadata_definition_comparator import MetadataDefinitionComparator
-from monitoring.metadata_migration_tracker import MetadataMigrationTracker
+from monitoring.export import FlexExport
 import time
 import argparse
 import os
 import json
+from utils import create_empty_directory
+import csv
 
 current_file_path = os.path.abspath(__file__)
 current_dir = os.path.dirname(current_file_path)
@@ -69,7 +71,7 @@ def main():
     export_command.add_argument('--filters', type=str, help='Export filters to apply. Example : "status=Failed"')
     export_command.add_argument('--include_error', action='store_true', help='Include error (only useful for failed jobs).')
     export_command.add_argument('--include_metadata', action='store_true', help='Include metadata (only useful for assets).')
-    export_command.add_argument('--columns', type=str, help='Columns to export.')
+    export_command.add_argument('--header', type=str, help='Header for columns to export.')
     export_command.set_defaults(func=export)
 
     # Retry
@@ -93,8 +95,9 @@ def main():
     create_command = subparsers.add_parser('create', help='Create new object or environment.')
     create_command.add_argument('--env', type=str, help='Environment to use.')
     create_command.add_argument('--set-default', action='store_true', help="Set environment as default.")
-    create_command.add_argument('--type', type=str, help='Object type : env, action.')
+    create_command.add_argument('--type', type=str, help='Object type : env, action, header.')
     create_command.add_argument('--name', type=str, help='Object name.')
+    create_command.add_argument('--value', type=str, help='Object value.')
     create_command.add_argument('--url', type=str, help='Environment URL.')
     create_command.add_argument('--username', type=str, help='Username.')
     create_command.add_argument('--password', type=str, help='User password')
@@ -136,6 +139,17 @@ def create(args):
                 create_env(name, url, username, password)
             else:
                 print('Please specify a url, username and password value to create a new environment!')
+        case 'header':
+            header = args.value.split(',')
+            create_empty_directory(current_dir + '/headers/')
+            if not getattr(args, 'name', None):
+                raise ("Please specify a header name!")
+            file_name = args.name + '.csv'
+            file_path = f'{current_dir}/headers/{file_name}'
+            # Open the file in write mode and write the headers
+            with open(file_path, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(header)
         case _:
             print(f"{name} object cannot be created.")
     
@@ -153,7 +167,7 @@ def export(args):
     
     flex_api_client = FlexApiClient(BASE_URL, USERNAME, PASSWORD)
 
-    metadata_migration_tracker = MetadataMigrationTracker(flex_api_client)
+    metadata_migration_tracker = FlexExport(flex_api_client)
 
     metadata_migration_tracker.export_by_batch(args, current_dir)
 
