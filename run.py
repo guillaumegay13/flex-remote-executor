@@ -67,7 +67,9 @@ def main():
     export_command.add_argument('--type', type=str, help='Object type : jobs, assets, workflows, etc.')
     export_command.add_argument('--name', type=str, help='Object name : action name, workflow definition name.')
     export_command.add_argument('--filters', type=str, help='Export filters to apply. Example : "status=Failed"')
-    export_command.add_argument('--include_error', type=bool, help='Include the job error message if failed.')
+    export_command.add_argument('--include_error', action='store_true', help='Include error (only useful for failed jobs).')
+    export_command.add_argument('--include_metadata', action='store_true', help='Include metadata (only useful for assets).')
+    export_command.add_argument('--columns', type=str, help='Columns to export.')
     export_command.set_defaults(func=export)
 
     # Retry

@@ -184,6 +184,9 @@ class MetadataMigrationTracker:
 
         df_flat.to_csv(f'exports/assets/{filename}', columns=['id', 'name', 'assetOrigin', 'referenceName', 'fileInformation.originalFileName'], sep=';', index=False)
 
+    """
+    Export method without parallelization (obsolete)
+    """
     def export(self, type, filters = None, include_error = None):
         job_list = self.flex_api_client.get_objects_by_filters(type, filters, 100)
 
@@ -221,12 +224,16 @@ class MetadataMigrationTracker:
         df_flat.to_csv(f'exports/{type}/{filename}', columns=columns, sep=';', index=False)
         print(f"{file_path} created!")
 
+    """
+    Export method with parallelization, by batches of {limit} (100 by default).
+    """
     def export_by_batch(self, args, root_dir):
 
+        limit = 100
         filters = args.filters
         type = args.type
-        include_error = args.include_error
 
+        """
         columns=['id']
         if type == "jobs":
             columns.extend(['name', 'status', 'created', 'workflow.displayName'])
@@ -235,6 +242,7 @@ class MetadataMigrationTracker:
         elif type == "events":
             columns.extend(['object.name', 'object.id', 'exceptionMessage'])
         # elif type == "assets"
+        """
 
         if getattr(args, 'name', None):
             name = args.name
@@ -256,11 +264,17 @@ class MetadataMigrationTracker:
                 else: 
                     filters = f"definitionId={workflow_definition_id}"
 
+        # Include metadata for assets only
+        if getattr(args, 'include_metadata', None) and type == 'assets':
+            if filters:
+                filters += f";includeMetadata=true"
+            else:
+                filters = f"includeMetadata=true"
+
         total_number_of_results = self.flex_api_client.get_total_results(type, filters)
 
         print(f"Number of instances to export : {total_number_of_results}")
 
-        limit = 100
         offsets = range(0, total_number_of_results, limit)
 
         # Using ThreadPoolExecutor to run API calls in parallel
@@ -278,16 +292,26 @@ class MetadataMigrationTracker:
                 except Exception as exc:
                     print(f"An error occurred: {exc}")
 
-        if include_error:
-            columns.append('exceptionMessage')
-            for object in data[f'{type}']:
-                job_history = self.flex_api_client.get_job_history(object["id"])
-                for event in job_history["events"]:
-                    if event["eventType"] == "Failed":
-                        exception_message = event["exceptionMessage"]
-                        error = exception_message.split("\n")[0].replace('Exception: ', '')
-                        object["exceptionMessage"] = error
-            print(f"Errors fetched with offset {data['offset']}")
+        if getattr(args, 'include_error', None) and "Failed" in filters:
+            # Using ThreadPoolExecutor to run API calls in parallel
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                # Create a future to URL mapping
+                futures = [executor.submit(self.flex_api_client.get_job_history, object["id"]) for object in data[f'{type}']]
+
+                # Collecting results as they complete
+                job_errors = []
+                for future in concurrent.futures.as_completed(futures):
+                    try:
+                        job_history = future.result()
+                        for event in job_history["events"]:
+                            if event["eventType"] == "Failed":
+                                exception_message = event["exceptionMessage"]
+                                error = exception_message.split("\n")[0].replace('Exception: ', '')
+                                object["exceptionMessage"] = error
+                                job_errors.extend(data[f'{type}'])
+                        # print(f"Data fetched with offset {data['offset']}")
+                    except Exception as exc:
+                        print(f"An error occurred: {exc}")
 
         df = pd.DataFrame(objects)
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -300,5 +324,10 @@ class MetadataMigrationTracker:
         file_path = f'{root_dir}/exports/{type}/{filename}'
         # print(f"Creating export file {filename} in {file_path}")
             
-        df_flat.to_csv(f'{file_path}', columns=columns, sep=';', index=False)
+        if getattr(args, 'columns', None):
+            columns = args.columns.split(',')
+            df_flat.to_csv(f'{file_path}', columns=columns, sep=';', index=False)
+        else:
+            df_flat.to_csv(f'{file_path}', sep=';', index=False)
+
         print(f"{filename} created!")
