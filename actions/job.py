@@ -41,6 +41,21 @@ def push_job_configuration(flexApiClient, file_path, job_id = None):
     print(f"Updating job ID {job_id}...")
     flexApiClient.push_object_configuration(file_path, job_id, "job")
 
+def update_and_retry_last_job(flexApiClient, file_path):
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+    for line in lines:
+        if 'lastJobId : ' in line:
+            lastJobId = line.strip().split('lastJobId : ')[1]
+    
+    if not lastJobId:
+        raise Exception("Last Job ID not found. Please create a new job first!")
+    
+    push_job_configuration(flexApiClient, file_path, lastJobId)
+
+    print(f"Retrying job ID {lastJobId}...")
+    flexApiClient.retry_job(lastJobId)
+
 def retry_last_job(flexApiClient, file_path):
     with open(file_path, 'r') as file:
         lines = file.readlines()

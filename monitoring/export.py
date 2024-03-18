@@ -124,7 +124,7 @@ class FlexExport:
             # Using ThreadPoolExecutor to run API calls in parallel
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 # Create a future to URL mapping
-                futures = [executor.submit(self.flex_api_client.get_job_history, object["id"]) for object in data[f'{type}']]
+                futures = [executor.submit(self.flex_api_client.get_job_history, object["id"]) for object in objects]
 
                 # Collecting results as they complete
                 job_errors = []
@@ -135,11 +135,11 @@ class FlexExport:
                             if event["eventType"] == "Failed":
                                 exception_message = event["exceptionMessage"]
                                 error = exception_message.split("\n")[0].replace('Exception: ', '')
-                                object["exceptionMessage"] = error
-                                job_errors.extend(data[f'{type}'])
+                                job_errors.append(error)
                         # print(f"Data fetched with offset {data['offset']}")
                     except Exception as exc:
                         print(f"An error occurred: {exc}")
+                objects["exceptionMessage"] = job_errors
 
         df = pd.DataFrame(objects)
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")

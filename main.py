@@ -3,7 +3,7 @@ import os
 from client.flex_api_client import FlexApiClient
 from client.flex_cm_client import FlexCmClient
 from actions.action import create_action, push_action_configuration, pull_action_configuration
-from actions.job import create_job, push_job_configuration, retry_last_job, cancel_job
+from actions.job import create_job, push_job_configuration, retry_last_job, cancel_job, update_and_retry_last_job
 from actions.file import create_file
 from configurations.workflow_migrator import WorfklowMigrator
 from configurations.metadata_definition_comparator import MetadataDefinitionComparator
@@ -38,6 +38,8 @@ def main():
             push_job_configuration(flexApiClient, file_path)
         case "retry_last_job":
             retry_last_job(flexApiClient, file_path)
+        case "update_and_retry_last_job":
+            update_and_retry_last_job(flexApiClient, file_path)
         case "create_file":
             className = sys.argv[2]
             project_path = file_path
