@@ -2,3 +2,4 @@
 exports/*
 bash.sh
 env*
+headers/*
