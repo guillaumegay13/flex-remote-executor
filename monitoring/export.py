@@ -1,11 +1,8 @@
 import pandas as pd
 from datetime import datetime
 import os
-from objects.flex_objects import FlexJob
 import json
-import time
 import concurrent.futures
-import math
 from utils import create_empty_directory
 
 class FlexExport:
@@ -120,6 +117,8 @@ class FlexExport:
                 except Exception as exc:
                     print(f"An error occurred: {exc}")
 
+        df = pd.DataFrame(objects)
+
         if getattr(args, 'include_error', None) and "Failed" in filters:
             # Using ThreadPoolExecutor to run API calls in parallel
             with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -131,17 +130,22 @@ class FlexExport:
                 for future in concurrent.futures.as_completed(futures):
                     try:
                         job_history = future.result()
+                        error_found = False
                         for event in job_history["events"]:
                             if event["eventType"] == "Failed":
                                 exception_message = event["exceptionMessage"]
                                 error = exception_message.split("\n")[0].replace('Exception: ', '')
                                 job_errors.append(error)
-                        # print(f"Data fetched with offset {data['offset']}")
+                                error_found = True
+                        if not error_found:
+                            job_errors.append("None")
                     except Exception as exc:
+                        job_errors.append("Failed")
                         print(f"An error occurred: {exc}")
-                objects["exceptionMessage"] = job_errors
 
-        df = pd.DataFrame(objects)
+            df["exceptionMessage"] = job_errors
+            # print (job_errors)
+
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         filename = f"{type}_{timestamp}.csv"
         create_empty_directory(f'{root_dir}/exports/{type}/')
@@ -150,7 +154,7 @@ class FlexExport:
         df_flat = pd.json_normalize(json_struct)
 
         file_path = f'{root_dir}/exports/{type}/{filename}'
-        # print(f"Creating export file {filename} in {file_path}")
+        print(f"Creating export file {filename} in {root_dir}/exports/{type}/")
         
         # Specify header without extension
         if getattr(args, 'header', None):
@@ -158,9 +162,9 @@ class FlexExport:
             header_file_path = f'{root_dir}/headers/{header_file_name}'
             header = pd.read_csv(header_file_path)
             # Load the CSV file
-            header_df = pd.read_csv(file_path, nrows=0)  # Load no rows, just headers
+            header_df = pd.read_csv(header_file_path, nrows=0)
             header = header_df.columns[0]
-            columns = header.split(',')
+            columns = header.split(';')
             df_flat.to_csv(f'{file_path}', columns=columns, sep=';', index=False)
         else:
             df_flat.to_csv(f'{file_path}', sep=';', index=False)
