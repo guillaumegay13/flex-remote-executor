@@ -104,7 +104,7 @@ class FlexExport:
 
         # Using ThreadPoolExecutor to run API calls in parallel
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Create a future to URL mapping
+            # Create a future
             futures = [executor.submit(self.flex_api_client.get_next_objects, type, filters, offset, limit) for offset in offsets]
 
             # Collecting results as they complete
@@ -113,7 +113,6 @@ class FlexExport:
                 try:
                     data = future.result()
                     objects.extend(data[f'{type}'])
-                    # print(f"Data fetched with offset {data['offset']}")
                 except Exception as exc:
                     print(f"An error occurred: {exc}")
 
@@ -122,28 +121,37 @@ class FlexExport:
         if getattr(args, 'include_error', None) and "Failed" in filters:
             # Using ThreadPoolExecutor to run API calls in parallel
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                # Create a future to URL mapping
+                # Create a future
                 futures = [executor.submit(self.flex_api_client.get_job_history, object["id"]) for object in objects]
 
+                # Initialize the job_errors list with placeholders
+                job_errors = [None] * len(objects)
+                
                 # Collecting results as they complete
                 job_errors = []
-                for future in concurrent.futures.as_completed(futures):
+                for index, future in enumerate(concurrent.futures.as_completed(futures)):
+                    error_message = "None"  # Default error message if no error is found
+
                     try:
+                        job_errors.append("Failed")
                         job_history = future.result()
                         error_found = False
                         for event in job_history["events"]:
                             if event["eventType"] == "Failed":
                                 exception_message = event["exceptionMessage"]
-                                error = exception_message.split("\n")[0].replace('Exception: ', '')
-                                job_errors.append(error)
-                                error_found = True
-                        if not error_found:
-                            job_errors.append("None")
+                                error_message = exception_message.split("\n")[0].replace('Exception: ', '')
+                                break 
                     except Exception as exc:
-                        job_errors.append("Failed")
                         print(f"An error occurred: {exc}")
+                        error_message = "Failed"  # Set error message to "Failed" if an exception occurs
 
-            df["exceptionMessage"] = job_errors
+                    # Update the corresponding entry in job_errors with the determined error message
+                    job_errors[index] = error_message
+
+            assert len(job_errors) == len(df)
+            # df["exceptionMessage"] = job_errors
+            df['exceptionMessage'] = pd.Series(job_errors)
+
             # print (job_errors)
 
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
