@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
 
-import sys
 import os
 from client.flex_api_client import FlexApiClient
-from client.flex_cm_client import FlexCmClient
-from actions.action import create_action, push_action_configuration, pull_action_configuration
-from actions.job import create_job, push_job_configuration, retry_last_job, cancel_job
-from actions.file import create_file
-from configurations.workflow_migrator import WorfklowMigrator
-from configurations.metadata_definition_comparator import MetadataDefinitionComparator
+from actions.job import cancel_job
 from monitoring.export import FlexExport
 import time
 import argparse
@@ -16,6 +10,8 @@ import os
 import json
 from utils import create_empty_directory
 import csv
+import pandas as pd
+from objects.flex_objects import FlexAction
 
 current_file_path = os.path.abspath(__file__)
 current_dir = os.path.dirname(current_file_path)
@@ -169,7 +165,53 @@ def export(args):
 
     metadata_migration_tracker = FlexExport(flex_api_client)
 
-    metadata_migration_tracker.export_by_batch(args, current_dir)
+    type = args.type
+    filters = args.filters
+    name = args.name
+    prefix = name
+
+    if getattr(args, 'include_error', None) and "Failed" in filters and type == "workflows":
+        print("Getting jobs from workflow definition")
+        workflow_definition_name = name
+        workflow_definition_id = flex_api_client.get_workflow_definition_id(workflow_definition_name)
+        workflow_structure = flex_api_client.get_workflow_structure(workflow_definition_id)
+
+        nodes = workflow_structure["nodes"]
+
+        action_list = []
+
+        if (len(nodes) > 0):
+            for node in nodes:
+                if (node["type"] == "ACTION"):
+                    action = FlexAction(node["action"]["id"], node["action"]["type"])
+                    action_list.append(action)
+
+        set_action_list = set(action_list) 
+        unique_action_list = (list(set_action_list))
+
+        args.type = "jobs"
+        df_list = []
+        for action in unique_action_list:
+            action_id = action.id
+            action_type = action.type
+            if filters:
+                new_filters = filters + f";actionId={action_id};actionType={action_type}"
+            else:
+                new_filters = f"actionId={action_id};actionType={action_type}"
+            args.filters = new_filters
+            args.name = None
+            df_list.append(metadata_migration_tracker.export_by_batch(args))
+
+        final_df = pd.concat(df_list, ignore_index=True)
+        if getattr(args, 'header', None):
+            header = args.header
+        metadata_migration_tracker.export_csv(final_df, current_dir, type, prefix, header)
+    else:
+        df = metadata_migration_tracker.export_by_batch(args)
+        if getattr(args, 'header', None):
+            header = args.header
+        metadata_migration_tracker.export_csv(df, current_dir, type, prefix, header)
+
 
     end_time = time.time()
     duration = end_time - start_time
@@ -223,15 +265,16 @@ def retry(args):
 
     offset = 0
     limit = 100
-    instances_to_retry = flex_api_client.get_next_objects(type, filters, offset, limit)
+    instances_to_retry = flex_api_client.get_next_objects(type, filters, offset, limit)[type]
 
     while offset < total_number_of_results:
         for instance in instances_to_retry:
             instance_id = instance["id"]
             flex_api_client.retry_instance(instance_id, type)
+            time.sleep(30)
             
         offset+=limit
-        instances_to_retry = flex_api_client.get_next_objects(type, filters, offset, limit)
+        instances_to_retry = flex_api_client.get_next_objects(type, filters, offset, limit)[type]
 
     end_time = time.time()
     duration = end_time - start_time

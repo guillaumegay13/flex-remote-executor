@@ -797,3 +797,15 @@ class FlexApiClient:
             return response_json
         except requests.RequestException as e:
             raise Exception(e)
+        
+    def get_workflow_structure(self, workflowDefinitionId):
+        """Get workflow structure."""
+        endpoint = f"/workflowDefinitions/{workflowDefinitionId}/structure"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            response_json = response.json()
+            return response_json
+
+        except requests.RequestException as e:
+            raise Exception(e)

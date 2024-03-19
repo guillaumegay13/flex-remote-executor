@@ -52,7 +52,7 @@ class FlexExport:
     """
     Export method with parallelization, by batches of {limit} (100 by default).
     """
-    def export_by_batch(self, args, root_dir):
+    def export_by_batch(self, args):
 
         limit = 100
         filters = args.filters
@@ -70,9 +70,11 @@ class FlexExport:
         """
 
         if getattr(args, 'name', None):
-            name = args.name
 
-            if type == "jobs":
+            if getattr(args, 'name', None):
+                name = args.name
+
+            if type == "jobs" and getattr(args, 'name', None):
                 action_name = name
                 action_id = self.flex_api_client.get_action_id(action_name)
                 action = self.flex_api_client.get_action(action_id)
@@ -81,7 +83,7 @@ class FlexExport:
                     filters += f";actionId={action_id};actionType={action_type}"
                 else: 
                     filters = f"actionId={action_id};actionType={action_type}"
-            elif type == "workflows":
+            elif type == "workflows" and getattr(args, 'name', None):
                 workflow_definition_name = name
                 workflow_definition_id = self.flex_api_client.get_workflow_definition_id(workflow_definition_name)
                 if filters:
@@ -118,7 +120,7 @@ class FlexExport:
 
         df = pd.DataFrame(objects)
 
-        if getattr(args, 'include_error', None) and "Failed" in filters:
+        if getattr(args, 'include_error', None) and "Failed" in filters and type == "jobs":
             # Using ThreadPoolExecutor to run API calls in parallel
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 # Create a future
@@ -135,7 +137,6 @@ class FlexExport:
                     try:
                         job_errors.append("Failed")
                         job_history = future.result()
-                        error_found = False
                         for event in job_history["events"]:
                             if event["eventType"] == "Failed":
                                 exception_message = event["exceptionMessage"]
@@ -152,10 +153,11 @@ class FlexExport:
             # df["exceptionMessage"] = job_errors
             df['exceptionMessage'] = pd.Series(job_errors)
 
-            # print (job_errors)
+        return df
 
+    def export_csv(self, df, root_dir, type, prefix, header = None):
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        filename = f"{type}_{timestamp}.csv"
+        filename = f"{prefix}_{timestamp}.csv"
         create_empty_directory(f'{root_dir}/exports/{type}/')
 
         json_struct = json.loads(df.to_json(orient="records"))
@@ -163,10 +165,10 @@ class FlexExport:
 
         file_path = f'{root_dir}/exports/{type}/{filename}'
         print(f"Creating export file {filename} in {root_dir}/exports/{type}/")
-        
+            
         # Specify header without extension
-        if getattr(args, 'header', None):
-            header_file_name = args.header + '.csv'
+        if header:
+            header_file_name = header + '.csv'
             header_file_path = f'{root_dir}/headers/{header_file_name}'
             header = pd.read_csv(header_file_path)
             # Load the CSV file

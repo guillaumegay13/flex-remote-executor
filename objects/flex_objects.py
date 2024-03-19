@@ -17,6 +17,11 @@ class FlexJob(FlexObject):
         self.owner = owner
         self.error = error
 
+class FlexAction():
+    def __init__(self, id, type):
+        self.id = id
+        self.type = type
+
 class FlexAsset(FlexObject):
     def __init__(self, id, uuid, name, displayName, objectTypeId, objectTypeName, originalFileName = None):
         super().__init__(id, uuid, name, displayName, objectTypeId, objectTypeName)
