@@ -80,7 +80,7 @@ class WorfklowMigrator:
                         for dependency in self.get_action_dependencies(workflow_definition_to_append):
                             action_dependency_list.append(dependency)
                         action_dependency_list.append(workflow_definition_to_append)
-            case "import":
+            case "import" | "re-import":
                 action_configuration = self.flex_cm_client.get_object_configuration(action.id, "action")
                 # Workflow definition
                 source_resource_instance = action_configuration["instance"]["source-file"]["source"]["source-resource-item"]["source-resource"]
@@ -91,7 +91,8 @@ class WorfklowMigrator:
                         action_dependency_list.append(dependency)
                     action_dependency_list.append(source_resource)
                 if "move-file" in action_configuration["instance"]["source-file"]:
-                    if action_configuration["instance"]["source-file"]["move-file"]["move-target-resource"]:
+                    if action_configuration["instance"]["source-file"]["move-file"]["move-target-resource"] and "id" in action_configuration["instance"]["source-file"]["move-file"]["move-target-resource"]:
+                        print(action_configuration)
                         move_resource_instance = action_configuration["instance"]["source-file"]["move-file"]["move-target-resource"]
                         move_resource = FlexCmResource(move_resource_instance["id"], move_resource_instance["uuid"], move_resource_instance["value"], move_resource_instance["name"], None, move_resource_instance["type"], "resource", self.flex_cm_client.get_resource_subtype(move_resource_instance["id"]))
                         for dependency in self.get_action_dependencies(move_resource):
@@ -130,16 +131,24 @@ class WorfklowMigrator:
                 action_dependency_list.extend(self.get_workflow_definition_dependencies(action))
             case "move":
                 action_configuration = self.flex_cm_client.get_object_configuration(action.id, "action")
-                folder_resource_instance = action_configuration["instance"]["folder-resource"]
-                folder_resource = FlexCmResource(folder_resource_instance["id"], folder_resource_instance["uuid"], folder_resource_instance["value"], folder_resource_instance["name"], None, folder_resource_instance["type"], "resource", "Folder")
-                action_dependency_list.extend(self.get_action_dependencies(folder_resource))
+                instance = action_configuration["instance"]
+                if "folder-resource" in instance:
+                    folder_resource_instance = action_configuration["instance"]["folder-resource"]
+                    folder_resource = FlexCmResource(folder_resource_instance["id"], folder_resource_instance["uuid"], folder_resource_instance["value"], folder_resource_instance["name"], None, folder_resource_instance["type"], "resource", "Folder")
+                    action_dependency_list.extend(self.get_action_dependencies(folder_resource))
             case "purge":
                 pass
-            case "restore" | "extract":
+            case "rename":
+                pass
+            case "modify-relationship":
+                pass
+            case "restore" | "extract" | "archive":
                 action_configuration = self.flex_cm_client.get_object_configuration(action.id, "action")
-                execution_resource_instance = action_configuration["instance"]["execution-resource"]
-                execution_resource = FlexCmResource(execution_resource_instance["id"], execution_resource_instance["uuid"], execution_resource_instance["value"], execution_resource_instance["name"], None, execution_resource_instance["type"], "resource", "Process")
-                action_dependency_list.extend(self.get_action_dependencies(execution_resource))
+                instance = action_configuration["instance"]
+                if "execution-resource" in instance:
+                    execution_resource_instance = instance["execution-resource"]
+                    execution_resource = FlexCmResource(execution_resource_instance["id"], execution_resource_instance["uuid"], execution_resource_instance["value"], execution_resource_instance["name"], None, execution_resource_instance["type"], "resource", "Process")
+                    action_dependency_list.extend(self.get_action_dependencies(execution_resource))
             case _:
                 # This error has been added to make sure no dependency is missing!
                 raise Exception(f"action type {action.objectTypeName} is not implemented yet!")
