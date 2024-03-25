@@ -422,6 +422,26 @@ class FlexApiClient:
         except requests.RequestException as e:
             print(f"POST request error: {e}")
             return None
+        
+    def cancel_instance(self, type, instanceId):
+        """Cancel a job."""
+        endpoint = f"/{type}/{instanceId}/actions"
+        try:
+            status = self.get_instance(instanceId, type)["status"]
+
+            if status != "Failed":
+                raise Exception(f"Couldn't cancel the instance ID {instanceId} as it is not Failed, its status is : {status}")
+            payload = {
+                        'action': 'cancel'
+                    }
+                
+            response = requests.post(self.base_url + endpoint, json=payload, headers=self.headers)
+            response.raise_for_status()
+
+            return response.json()
+        except requests.RequestException as e:
+            print(f"POST request error: {e}")
+            return None
     
     def get_jobs(self, name=None, status=None):
         """Get a job."""

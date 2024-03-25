@@ -291,23 +291,42 @@ def cancel(args):
         
     flex_api_client = FlexApiClient(BASE_URL, USERNAME, PASSWORD)
 
-    if getattr(args, 'errors', None):
-        cancel_failed_jobs(flex_api_client, args)
-    else:
-        # Cancel jobs regardless of their errors
-        job_list = get_jobs(args, flex_api_client)
-        print(f"Number of jobs to cancel : {len(job_list)}")
-        for job in job_list:
-            job_id = job["id"]
-            try:
-                cancel_job(flex_api_client, None, job_id)
-            except Exception as e:
-                print(f"Unable to cancel job {job_id} : ", e)
-            time.sleep(0.05)
+    type = args.type
+    filters = args.filters
 
-    end_time = time.time()
-    duration = end_time - start_time
-    print(f"finished in {round(duration)}s.")
+    if type == "workflows":
+        if getattr(args, 'name', None):
+            name = args.name
+            workflow_definition_name = name
+            workflow_definition_id = flex_api_client.get_workflow_definition_id(workflow_definition_name)
+            if filters:
+                filters += f";definitionId={workflow_definition_id}"
+            else: 
+                filters = f"actionId={workflow_definition_id}"
+        instances = flex_api_client.get_objects_by_filters(type, filters)
+        print(f"Number of instances to cancel : {len(instances)}")
+        for instance in instances:
+            instance_id = instance["id"]
+            flex_api_client.cancel_instance(type, instance_id)
+            print(f"Cancel instance ID {instance_id}")
+
+    elif type == "jobs":
+        if getattr(args, 'errors', None):
+            cancel_failed_jobs(flex_api_client, args)
+        else:
+            # Cancel jobs regardless of their errors
+            job_list = get_jobs(args, flex_api_client)
+            print(f"Number of jobs to cancel : {len(job_list)}")
+            for job in job_list:
+                job_id = job["id"]
+                try:
+                    cancel_job(flex_api_client, None, job_id)
+                except Exception as e:
+                    print(f"Unable to cancel job {job_id} : ", e)
+                time.sleep(0.05)
+        end_time = time.time()
+        duration = end_time - start_time
+        print(f"finished in {round(duration)}s.")
 
 def cancel_failed_jobs(flex_api_client, args):
     errors = args.errors
