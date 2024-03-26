@@ -106,6 +106,8 @@ class WorfklowMigrator:
                 pass
             case "wait":
                 pass
+            case "export":
+                pass
             case "resource":
                 action_configuration = self.flex_cm_client.get_object_configuration(action.id, "resource")
                 resourceSubType = self.flex_cm_client.get_resource_subtype(action.id)
