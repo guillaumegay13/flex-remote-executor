@@ -829,3 +829,39 @@ class FlexApiClient:
 
         except requests.RequestException as e:
             raise Exception(e)
+        
+    def get_object_configuration(self, type, object_id):
+        """Get object configuration."""
+        endpoint = f"/{type}s/{object_id}/configuration"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            response_json = response.json()
+            return response_json
+
+        except requests.RequestException as e:
+            raise Exception(e)
+
+    def update_object_configuration(self, type, object_id, configuration):
+        """Update object configuration."""
+        endpoint = f"/{type}s/{object_id}/configuration"
+        try:
+            response = requests.put(self.base_url + endpoint, json=configuration, headers=self.headers)
+            response.raise_for_status()
+            response_json = response.json()
+            return response_json
+
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def get_object_id(self, type, name):
+        """Get an object ID based on its name."""
+        endpoint = f"/{type}s;name={name};exactNameMatch=true"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            response_json = response.json()
+            return response_json[0]["id"]
+
+        except requests.RequestException as e:
+            raise Exception(e)

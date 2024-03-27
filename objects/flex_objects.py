@@ -28,9 +28,10 @@ class FlexAsset(FlexObject):
         self.originalFileName = originalFileName
 
 class FlexCmObject(FlexObject):
-    def __init__(self, id, uuid, name, displayName, objectTypeId, objectTypeName, flexCmName):
+    def __init__(self, id, uuid, name, displayName, objectTypeId, objectTypeName, flexCmName, type = None):
         super().__init__(id, uuid, name, displayName, objectTypeId, objectTypeName)
         self.flexCmName = flexCmName
+        self.type = type
 
 class FlexCmResource(FlexCmObject):
     def __init__(self, id, uuid, name, displayName, objectTypeId, objectTypeName, flexCmName, resourceSubType):

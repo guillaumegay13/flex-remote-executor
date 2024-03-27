@@ -2,6 +2,7 @@
 
 import os
 from client.flex_api_client import FlexApiClient
+from client.flex_cm_client import FlexCmClient
 from actions.job import cancel_job
 from monitoring.export import FlexExport
 import time
@@ -12,6 +13,7 @@ from utils import create_empty_directory
 import csv
 import pandas as pd
 from objects.flex_objects import FlexAction
+from configurations.workflow_migrator import WorfklowMigrator
 
 current_file_path = os.path.abspath(__file__)
 current_dir = os.path.dirname(current_file_path)
@@ -98,6 +100,14 @@ def main():
     create_command.add_argument('--username', type=str, help='Username.')
     create_command.add_argument('--password', type=str, help='User password')
     create_command.set_defaults(func=create)
+
+    # Migrate
+    create_command = subparsers.add_parser('migrate', help='Migrate an object from one environment to another.')
+    create_command.add_argument('--source-env', type=str, help='Source environment to use.')
+    create_command.add_argument('--target-env', type=str, help='Target environment to use.')
+    create_command.add_argument('--type', type=str, help='Object type : env, action, header.')
+    create_command.add_argument('--name', type=str, help='Object name.')
+    create_command.set_defaults(func=migrate)
 
     args = parser.parse_args()
 
@@ -271,7 +281,7 @@ def retry(args):
         for instance in instances_to_retry:
             instance_id = instance["id"]
             flex_api_client.retry_instance(instance_id, type)
-            time.sleep(30)
+            time.sleep(1)
             
         offset+=limit
         instances_to_retry = flex_api_client.get_next_objects(type, filters, offset, limit)[type]
@@ -302,7 +312,7 @@ def cancel(args):
             if filters:
                 filters += f";definitionId={workflow_definition_id}"
             else: 
-                filters = f"actionId={workflow_definition_id}"
+                filters = f"definitionId={workflow_definition_id}"
         instances = flex_api_client.get_objects_by_filters(type, filters)
         print(f"Number of instances to cancel : {len(instances)}")
         for instance in instances:
@@ -327,6 +337,36 @@ def cancel(args):
         end_time = time.time()
         duration = end_time - start_time
         print(f"finished in {round(duration)}s.")
+
+
+def migrate(args):
+
+    start_time = time.time()
+
+    if getattr(args, 'source_env', None) and getattr(args, 'target_env', None):
+        flex_api_client_source = FlexCmClient(connect(args.source_env))
+        flex_api_client_target = FlexCmClient(connect(args.target_env))
+    else:
+        raise Exception("Please provide a source and target environment.")
+    
+    type = args.type
+    migrator = WorfklowMigrator(flex_api_client_source, flex_api_client_target)
+    if getattr(args, 'name', None):
+        name = args.name
+
+    if type == "workflow":
+        workflow_definition_name = name
+        workflow_definition = flex_api_client_source.get_workflow_definition(workflow_definition_name)
+        dependency_list = migrator.get_workflow_definition_dependencies(workflow_definition)
+        dependency_list.extend(migrator.get_workflow_references(workflow_definition))
+        migrator.migrate_workflow_definition(workflow_definition)
+    else:
+        object_id = flex_api_client_source.get_object_id(type, name)
+        migrator.migrate_object(type, object_id)
+
+    end_time = time.time()
+    duration = end_time - start_time
+    print(f"finished in {round(duration)}s.")
 
 def cancel_failed_jobs(flex_api_client, args):
     errors = args.errors

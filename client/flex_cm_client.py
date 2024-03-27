@@ -21,7 +21,7 @@ class FlexCmClient(FlexApiClient):
             else:
                 workflowDefinition = response_json["workflowDefinitions"][0]
             
-            workflow_definition = FlexCmObject(workflowDefinition["id"], workflowDefinition["uuid"], workflowDefinition["name"], workflowDefinition["displayName"], workflowDefinition["objectType"]["id"], workflowDefinition["objectType"]["name"], "worfklow_definition")
+            workflow_definition = FlexCmObject(workflowDefinition["id"], workflowDefinition["uuid"], workflowDefinition["name"], workflowDefinition["displayName"], workflowDefinition["objectType"]["id"], workflowDefinition["objectType"]["name"], "worfklow_definition", "workflowDefinition")
 
             return workflow_definition
 
@@ -91,7 +91,7 @@ class FlexCmClient(FlexApiClient):
                     if (node["type"] == "ACTION"):
                         object = node["action"]
                         if (object["name"] not in self.actionNameList):
-                            flexObject = FlexCmObject(object["id"], object["uuid"], object["name"], object["displayName"], object["actionType"]["id"], object["actionType"]["name"], "action")
+                            flexObject = FlexCmObject(object["id"], object["uuid"], object["name"], object["displayName"], object["actionType"]["id"], object["actionType"]["name"], "action", "action")
                             self.actionList.append(flexObject)
                             self.actionNameList.append(flexObject.name)
 

@@ -3,8 +3,9 @@ from client.flex_cm_client import FlexCmResource
 from objects.flex_objects import FlexCmObject
 
 class WorfklowMigrator:
-    def __init__(self, flex_cm_client):
+    def __init__(self, flex_cm_client, flex_cm_client_target = None):
         self.flex_cm_client = flex_cm_client
+        self.flex_cm_client_target = flex_cm_client_target
 
     def get_workflow_definition_dependencies(self, workflow_definition):
         """Get workflow definition dependencies."""
@@ -49,11 +50,11 @@ class WorfklowMigrator:
                     output_file_list = action_configuration["instance"]["output-file"]
                     for output_file in output_file_list:
                         transcoder_profile_instance = output_file["transcoder-profile"]["profile"]
-                        transcode_profile = FlexCmObject(transcoder_profile_instance["id"], transcoder_profile_instance["uuid"], transcoder_profile_instance["value"], transcoder_profile_instance["name"], None, transcoder_profile_instance["type"], "profile")
+                        transcode_profile = FlexCmObject(transcoder_profile_instance["id"], transcoder_profile_instance["uuid"], transcoder_profile_instance["value"], transcoder_profile_instance["name"], None, transcoder_profile_instance["type"], "profile", "profile")
                         action_dependency_list.append(transcode_profile)
                 elif action.objectTypeName == "create-proxy":
                         transcoder_profile_instance = action_configuration["instance"]["transcoder-profile"]["profile"]
-                        transcode_profile = FlexCmObject(transcoder_profile_instance["id"], transcoder_profile_instance["uuid"], transcoder_profile_instance["value"], transcoder_profile_instance["name"], None, transcoder_profile_instance["type"], "profile")
+                        transcode_profile = FlexCmObject(transcoder_profile_instance["id"], transcoder_profile_instance["uuid"], transcoder_profile_instance["value"], transcoder_profile_instance["name"], None, transcoder_profile_instance["type"], "profile", "profile")
                         action_dependency_list.append(transcode_profile)
                 # Output resource
                 output_resource_instance = action_configuration["instance"]["destination"]["output-resource"]
@@ -69,14 +70,14 @@ class WorfklowMigrator:
                 # Workflow definition
                 if "Workflow" in action_configuration_instance:
                     workflow_definition_instance = action_configuration["instance"]["Workflow"]
-                    workflow_definition_to_append = FlexCmObject(workflow_definition_instance["id"], workflow_definition_instance["uuid"], workflow_definition_instance["value"], workflow_definition_instance["name"], None, workflow_definition_instance["type"], "workflow_definition")
+                    workflow_definition_to_append = FlexCmObject(workflow_definition_instance["id"], workflow_definition_instance["uuid"], workflow_definition_instance["value"], workflow_definition_instance["name"], None, workflow_definition_instance["type"], "workflow_definition", "workflowDefinition")
                     for dependency in self.get_action_dependencies(workflow_definition_to_append):
                         action_dependency_list.append(dependency)
                     action_dependency_list.append(workflow_definition_to_append)
                 elif "workflows" in action_configuration_instance and len(action_configuration_instance["workflows"]) > 0:
                     for workflow in action_configuration_instance["workflows"]:
                         workflow_definition_instance = workflow["Workflow"]
-                        workflow_definition_to_append = FlexCmObject(workflow_definition_instance["id"], workflow_definition_instance["uuid"], workflow_definition_instance["value"], workflow_definition_instance["name"], None, workflow_definition_instance["type"], "workflow_definition")
+                        workflow_definition_to_append = FlexCmObject(workflow_definition_instance["id"], workflow_definition_instance["uuid"], workflow_definition_instance["value"], workflow_definition_instance["name"], None, workflow_definition_instance["type"], "workflow_definition", "workflowDefinition")
                         for dependency in self.get_action_dependencies(workflow_definition_to_append):
                             action_dependency_list.append(dependency)
                         action_dependency_list.append(workflow_definition_to_append)
@@ -207,3 +208,35 @@ class WorfklowMigrator:
                 # If the dependency is the actual workflow definition and it's not the last object of the dependency list, meaning there are references
                 if dependency.uuid == workflow_definition.uuid and index != len(dependency_list) - 1:
                     file.write("\nReferences (optional): \n\n")
+
+    def migrate_workflow_definition(self, workflow_definition, dependency_list):
+        """Migrate a full workflow definition with its dependencies. """
+
+        for dependency in dependency_list:
+            """Create or update the dependency."""
+
+            type = dependency.type
+            uuid = dependency.uuid
+
+            # Check in target environment
+            object_list = self.flex_cm_client_target.get_objects_by_filters(type, f"uuid:{uuid}")
+
+            # Check if the dependency exists or not
+            if (len(object_list) > 0):
+                # dependency exists
+                # update
+                # there should be only one object in the list as the UUID is unique
+                object = object_list[0]
+                object_id = object["id"]
+                self.migrate_object(type, object_id)
+            else:
+                # dependency does not exist
+                # create
+                name = dependency.name
+                # TODO
+
+        self.migrate_object("workflowDefinition", workflow_definition.id)
+
+    def migrate_object(self, type, object_id):
+        configuration = self.flex_cm_client_target.get_object_configuration(type, object_id)
+        self.flex_cm_client.update_object_configuration(type, object_id, configuration)
