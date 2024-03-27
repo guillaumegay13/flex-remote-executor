@@ -12,6 +12,8 @@ from utils import create_empty_directory
 import csv
 import pandas as pd
 from objects.flex_objects import FlexAction
+from actions.job import push_job_configuration
+from actions.action import push_action_configuration
 
 current_file_path = os.path.abspath(__file__)
 current_dir = os.path.dirname(current_file_path)
@@ -99,6 +101,14 @@ def main():
     create_command.add_argument('--password', type=str, help='User password')
     create_command.set_defaults(func=create)
 
+    # Update
+    create_command = subparsers.add_parser('update', help='Update an object.')
+    create_command.add_argument('--env', type=str, help='Environment to use.')
+    create_command.add_argument('--type', type=str, help='Object type : job, action, ...')
+    create_command.add_argument('--id', type=str, help='Object ID.')
+    create_command.add_argument('--script-path', type=str, help='Script path to update the job or action.')
+    create_command.set_defaults(func=update)
+
     args = parser.parse_args()
 
     if hasattr(args, 'func'):
@@ -148,6 +158,46 @@ def create(args):
                 writer.writerow(header)
         case _:
             print(f"{name} object cannot be created.")
+    
+    end_time = time.time()
+    duration = end_time - start_time
+    print(f"finished in {round(duration)}s.")
+
+def update(args):
+
+    start_time = time.time()
+    
+    id = args.id
+
+    if not getattr(args, 'type', None):
+        print("Please specify a type for the object to update.")
+        return
+    
+    type = args.type
+
+    if getattr(args, 'env', None):
+        (BASE_URL, USERNAME, PASSWORD) = connect(args.env)
+    else:
+        (BASE_URL, USERNAME, PASSWORD) = connect('default')
+    
+    flex_api_client = FlexApiClient(BASE_URL, USERNAME, PASSWORD)
+
+    match type:
+        case 'job':
+            if not getattr(args, 'script_path', None):
+                print("Please specify a type for the object to update.")
+                return
+            script_path = args.script_path
+            push_job_configuration(flex_api_client, script_path, id)
+        case 'action':
+            if not getattr(args, 'script_path', None):
+                print("Please specify a type for the object to update.")
+                return
+            script_path = args.script_path
+            push_job_configuration(flex_api_client, script_path, id)
+
+        case _:
+            print(f"Type {type} is not implemented yet!")
     
     end_time = time.time()
     duration = end_time - start_time
