@@ -1,0 +1,10 @@
+Delete Custom Markers
+pull --type action --uuid 5fe766da-25c4-4734-abdf-a00767b07b72
+add --uuid 5fe766da-25c4-4734-abdf-a00767b07b72
+commit --uuid 5fe766da-25c4-4734-abdf-a00767b07b72
+
+Delete custom markers
+pull --type worfklow_definition --uuid 95401641-f9f9-43fb-b0be-ef1ce90e5bd7
+add --uuid 95401641-f9f9-43fb-b0be-ef1ce90e5bd7
+commit --uuid 95401641-f9f9-43fb-b0be-ef1ce90e5bd7
+

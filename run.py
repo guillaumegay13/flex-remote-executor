@@ -2,6 +2,7 @@
 
 import os
 from client.flex_api_client import FlexApiClient
+from client.flex_cm_client import FlexCmClient
 from actions.job import cancel_job
 from monitoring.export import FlexExport
 import time
@@ -14,6 +15,7 @@ import pandas as pd
 from objects.flex_objects import FlexAction
 from actions.job import push_job_configuration
 from actions.action import push_action_configuration
+from configurations.workflow_migrator import WorfklowMigrator
 
 current_file_path = os.path.abspath(__file__)
 current_dir = os.path.dirname(current_file_path)
@@ -195,7 +197,7 @@ def update(args):
                 print("Please specify a type for the object to update.")
                 return
             script_path = args.script_path
-            push_job_configuration(flex_api_client, script_path, id)
+            push_action_configuration(flex_api_client, script_path, id)
 
         case _:
             print(f"Type {type} is not implemented yet!")
@@ -211,15 +213,26 @@ def export(args):
         (BASE_URL, USERNAME, PASSWORD) = connect(args.env)
     else:
         (BASE_URL, USERNAME, PASSWORD) = connect('default')
-    
-    flex_api_client = FlexApiClient(BASE_URL, USERNAME, PASSWORD)
-
-    metadata_migration_tracker = FlexExport(flex_api_client)
 
     type = args.type
     filters = args.filters
     name = args.name
     prefix = name
+
+    if type == "workflow_dependencies":
+        flex_cm_client = FlexCmClient(BASE_URL, USERNAME, PASSWORD)
+        migrator = WorfklowMigrator(flex_cm_client)
+        workflow_definition_name = name
+        workflow_definition = flex_cm_client.get_workflow_definition(workflow_definition_name)
+        dependency_list = migrator.get_workflow_definition_dependencies(workflow_definition)
+        dependency_list.extend(migrator.get_workflow_references(workflow_definition))
+        dependency_dir_path = current_dir + '/dependencies/'
+        create_empty_directory(dependency_dir_path)
+        migrator.create_dependencies_file(dependency_dir_path, workflow_definition, dependency_list)
+        return
+
+    flex_api_client = FlexApiClient(BASE_URL, USERNAME, PASSWORD)
+    metadata_migration_tracker = FlexExport(flex_api_client)
 
     if getattr(args, 'include_error', None) and "Failed" in filters and type == "workflows":
         print("Getting jobs from workflow definition")
