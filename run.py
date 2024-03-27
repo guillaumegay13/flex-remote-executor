@@ -75,9 +75,10 @@ def main():
     # Retry
     retry_command = subparsers.add_parser('retry', help='Retry failed jobs.')
     retry_command.add_argument('--env', type=str, help='Environment to use.')
-    retry_command.add_argument('--type', type=str, help='Object type : jobs, assets, workflows, etc.')
+    retry_command.add_argument('--type', type=str, help='Object type : jobs, workflows.')
     retry_command.add_argument('--name', type=str, help='Object name : action name, workflow definition name.')
     retry_command.add_argument('--filters', type=str, help='Filters to apply. Example : "status=Failed"')
+    retry_command.add_argument('--id', type=str, help='Object ID to retry.')
     retry_command.set_defaults(func=retry)
 
     # Cancel
@@ -281,6 +282,14 @@ def retry(args):
     filters = args.filters
     type = args.type
 
+    if getattr(args, 'id', None):
+        id = args.id
+        if type == 'job' or type == 'jobs':
+            flex_api_client.retry_job(id)
+        elif type == 'workflow' or type == 'workflows':
+            flex_api_client.retry_workflow(id)
+        return
+    
     # Only failed objects can be cancelled
     if getattr(args, 'filters', None):
         filters = args.filters
