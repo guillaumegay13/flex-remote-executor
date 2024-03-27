@@ -3,3 +3,4 @@ exports/*
 bash.sh
 env*
 headers/*
+dependencies/*
