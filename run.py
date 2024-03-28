@@ -72,6 +72,7 @@ def main():
     export_command.add_argument('--include-error', action='store_true', help='Include error (only useful for failed jobs).')
     export_command.add_argument('--include-metadata', action='store_true', help='Include metadata (only useful for assets).')
     export_command.add_argument('--header', type=str, help='Header for columns to export.')
+    export_command.add_argument('--uuid', type=str, help='Object UUID to export.')
     export_command.set_defaults(func=export)
 
     # Retry
@@ -165,7 +166,6 @@ def create(args):
                 writer = csv.writer(file)
                 writer.writerow(header)
         case 'workflow':
-
             if getattr(args, 'definitionId', None):
                 definitionId = args.definitionId
             else:
@@ -188,6 +188,29 @@ def create(args):
                     flex_api_client.create_workflow(definitionId, id)
             else:
                 flex_api_client.create_workflow(definitionId)
+        case 'job':
+            if getattr(args, 'actionId', None):
+                actionId = args.actionId
+            else:
+                raise Exception("Please specify an actionId!")
+
+            if getattr(args, 'env', None):
+                (BASE_URL, USERNAME, PASSWORD) = connect(args.env)
+            else:
+                (BASE_URL, USERNAME, PASSWORD) = connect('default')
+            
+            flex_api_client = FlexApiClient(BASE_URL, USERNAME, PASSWORD)
+
+            if getattr(args, 'assetId', None):
+                assetId = args.assetId
+                flex_api_client.create_job(definitionId, assetId)
+            elif (getattr(args, 'assetIds', None)):
+                assetIds = args.assetIds
+                list_of_ids = assetIds.split(',')
+                for id in list_of_ids:
+                    flex_api_client.create_job(definitionId, id)
+            else:
+                flex_api_client.create_job(definitionId)
         case _:
             print(f"{name} object cannot be created.")
     
@@ -245,14 +268,21 @@ def export(args):
 
     type = args.type
     filters = args.filters
-    name = args.name
-    prefix = name
 
     if type == "workflow_dependencies":
         flex_cm_client = FlexCmClient(BASE_URL, USERNAME, PASSWORD)
         migrator = WorfklowMigrator(flex_cm_client)
-        workflow_definition_name = name
-        workflow_definition = flex_cm_client.get_workflow_definition(workflow_definition_name)
+
+        if getattr(args, 'name', None):
+            name = args.name
+            workflow_definition_name = name
+            workflow_definition = flex_cm_client.get_workflow_definition(workflow_definition_name, None)
+        elif getattr(args, 'uuid', None):
+            uuid = args.uuid
+            workflow_definition = flex_cm_client.get_workflow_definition(None, uuid)
+        else:
+            raise Exception("Please specify name or uuid!")
+        
         dependency_list = migrator.get_workflow_definition_dependencies(workflow_definition)
         dependency_list.extend(migrator.get_workflow_references(workflow_definition))
         dependency_dir_path = current_dir + '/dependencies/'
@@ -298,12 +328,12 @@ def export(args):
         final_df = pd.concat(df_list, ignore_index=True)
         if getattr(args, 'header', None):
             header = args.header
-        metadata_migration_tracker.export_csv(final_df, current_dir, type, prefix, header)
+        metadata_migration_tracker.export_csv(final_df, current_dir, type, name, header)
     else:
         df = metadata_migration_tracker.export_by_batch(args)
         if getattr(args, 'header', None):
             header = args.header
-        metadata_migration_tracker.export_csv(df, current_dir, type, prefix, header)
+        metadata_migration_tracker.export_csv(df, current_dir, type, name, header)
 
 
     end_time = time.time()

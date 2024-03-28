@@ -6,9 +6,13 @@ class FlexCmClient(FlexApiClient):
     def __init__(self, base_url, username, password):
         super().__init__(base_url, username, password)
 
-    def get_workflow_definition(self, workflowDefinitionName):
+    def get_workflow_definition(self, name, uuid):
         """Get workflow definition."""
-        endpoint = f"/workflowDefinitions;name={workflowDefinitionName};exactNameMatch=true"
+        endpoint = f"/workflowDefinitions"
+        if name:
+            endpoint += f";name={name};exactNameMatch=true"
+        elif uuid:
+            endpoint += f";uuid={uuid}"
         try:
             response = requests.get(self.base_url + endpoint, headers=self.headers)
             response.raise_for_status()
@@ -17,11 +21,11 @@ class FlexCmClient(FlexApiClient):
             totalCount = response_json["totalCount"]
 
             if (totalCount == 0):
-                raise Exception(f"No workflow definition found with name {workflowDefinitionName}")
+                raise Exception(f"No workflow definition found")
             else:
                 workflowDefinition = response_json["workflowDefinitions"][0]
             
-            workflow_definition = FlexCmObject(workflowDefinition["id"], workflowDefinition["uuid"], workflowDefinition["name"], workflowDefinition["displayName"], workflowDefinition["objectType"]["id"], workflowDefinition["objectType"]["name"], "worfklow_definition")
+            workflow_definition = FlexCmObject(workflowDefinition["id"], workflowDefinition["uuid"], workflowDefinition["name"], workflowDefinition["displayName"], workflowDefinition["objectType"]["id"], workflowDefinition["objectType"]["name"], "workflow_definition")
 
             return workflow_definition
 
