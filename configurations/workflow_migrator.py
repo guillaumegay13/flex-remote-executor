@@ -234,6 +234,7 @@ class WorfklowMigrator:
                 # create
                 name = dependency.name
                 # TODO
+                # TODO : need the full object JSON to migrate ..
 
         self.migrate_object("workflowDefinition", workflow_definition.id)
 
