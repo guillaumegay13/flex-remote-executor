@@ -167,10 +167,10 @@ class WorfklowMigrator:
         return self.flex_cm_client.get_object_references(object_id)
     """
     
-    def get_workflow_references(self, worfklow_definition):
+    def get_workflow_references(self, workflow_definition):
         """Get workflow references."""
         reference_list = []
-        workflow_definition_id = worfklow_definition.id
+        workflow_definition_id = workflow_definition.id
         # Add the workflow references in the dependency list
         workflow_reference_list = self.flex_cm_client.get_workflow_references(workflow_definition_id)
         for flex_object in workflow_reference_list:
