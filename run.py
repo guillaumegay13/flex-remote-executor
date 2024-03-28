@@ -96,9 +96,12 @@ def main():
     create_command = subparsers.add_parser('create', help='Create new object or environment.')
     create_command.add_argument('--env', type=str, help='Environment to use.')
     create_command.add_argument('--set-default', action='store_true', help="Set environment as default.")
-    create_command.add_argument('--type', type=str, help='Object type : env, action, header.')
+    create_command.add_argument('--type', type=str, help='Object type : env, action, header, workflow, job.')
     create_command.add_argument('--name', type=str, help='Object name.')
     create_command.add_argument('--value', type=str, help='Object value.')
+    create_command.add_argument('--definitionId', type=str, help='Workflow definition ID.')
+    create_command.add_argument('--assetId', type=str, help='Asset ID to launch the job or workflow on.')
+    create_command.add_argument('--assetIds', type=str, help='Asset IDs to launch the job or workflow on.')
     create_command.add_argument('--url', type=str, help='Environment URL.')
     create_command.add_argument('--username', type=str, help='Username.')
     create_command.add_argument('--password', type=str, help='User password')
@@ -124,12 +127,6 @@ def main():
 def create(args):
 
     start_time = time.time()
-    
-    if not getattr(args, 'name', None):
-        print("Please specify a name for the object to create.")
-        return
-    
-    name = args.name
 
     if not getattr(args, 'type', None):
         print("Please specify a type for the object to create.")
@@ -139,6 +136,10 @@ def create(args):
 
     match type:
         case 'env':
+            if not getattr(args, 'name', None):
+                print("Please specify a name for the object to create.")
+                return
+            name = args.name
             if getattr(args, 'url', None) and getattr(args, 'username', None) and getattr(args, 'password', None):
                 url = args.url
                 username = args.username
@@ -149,6 +150,10 @@ def create(args):
             else:
                 print('Please specify a url, username and password value to create a new environment!')
         case 'header':
+            if not getattr(args, 'name', None):
+                print("Please specify a name for the object to create.")
+                return
+            name = args.name
             header = args.value.split(',')
             create_empty_directory(current_dir + '/headers/')
             if not getattr(args, 'name', None):
@@ -159,6 +164,30 @@ def create(args):
             with open(file_path, mode='w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(header)
+        case 'workflow':
+
+            if getattr(args, 'definitionId', None):
+                definitionId = args.definitionId
+            else:
+                raise Exception("Please specify a definitionId!")
+
+            if getattr(args, 'env', None):
+                (BASE_URL, USERNAME, PASSWORD) = connect(args.env)
+            else:
+                (BASE_URL, USERNAME, PASSWORD) = connect('default')
+            
+            flex_api_client = FlexApiClient(BASE_URL, USERNAME, PASSWORD)
+
+            if getattr(args, 'assetId', None):
+                assetId = args.assetId
+                flex_api_client.create_workflow(definitionId, assetId)
+            elif (getattr(args, 'assetIds', None)):
+                assetIds = args.assetIds
+                list_of_ids = assetIds.split(',')
+                for id in list_of_ids:
+                    flex_api_client.create_workflow(definitionId, id)
+            else:
+                flex_api_client.create_workflow(definitionId)
         case _:
             print(f"{name} object cannot be created.")
     

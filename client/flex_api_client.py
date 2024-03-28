@@ -344,7 +344,7 @@ class FlexApiClient:
                 print("Writing header at line " + str(insert_index))
                 file.writelines(lines)
         
-    def create_job(self, actionId):
+    def create_job(self, actionId, assetId = None):
         """Create a new job."""
         endpoint = "/jobs"
         try:
@@ -352,8 +352,31 @@ class FlexApiClient:
                         'actionId': actionId
                     }
                 
+            if assetId:
+                payload["assetId"] = assetId
+
             response = requests.post(self.base_url + endpoint, json=payload, headers=self.headers)
             response.raise_for_status()
+
+            return response.json()
+        except requests.RequestException as e:
+            raise Exception(e)
+        
+    def create_workflow(self, definitionId, assetId):
+        """Create a new workflow."""
+        endpoint = "/workflows"
+        try:
+            payload = {
+                        'definitionId': definitionId
+                    }
+                
+            if assetId:
+                payload["assetId"] = assetId
+
+            response = requests.post(self.base_url + endpoint, json=payload, headers=self.headers)
+            response.raise_for_status()
+
+            print("Launched workflow ID " + str(response.json()["id"]))
 
             return response.json()
         except requests.RequestException as e:
