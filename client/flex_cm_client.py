@@ -6,7 +6,7 @@ class FlexCmClient(FlexApiClient):
     def __init__(self, base_url, username, password):
         super().__init__(base_url, username, password)
 
-    def get_workflow_definition(self, name, uuid):
+    def get_workflow_definition(self, name = None, uuid = None):
         """Get workflow definition."""
         endpoint = f"/workflowDefinitions"
         if name:
