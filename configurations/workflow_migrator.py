@@ -130,7 +130,10 @@ class WorfklowMigrator:
                         # Process resources have no dependency, they are root objects
                         pass
             case "workflow-definition":
-                action_dependency_list.extend(self.get_workflow_definition_dependencies(action))
+                if action.name == "AmberFin Transcode":
+                    pass
+                else:
+                    action_dependency_list.extend(self.get_workflow_definition_dependencies(action))
             case "move":
                 action_configuration = self.flex_cm_client.get_object_configuration(action.id, "action")
                 instance = action_configuration["instance"]

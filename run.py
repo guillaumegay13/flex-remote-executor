@@ -82,6 +82,7 @@ def main():
     retry_command.add_argument('--name', type=str, help='Object name : action name, workflow definition name.')
     retry_command.add_argument('--filters', type=str, help='Filters to apply. Example : "status=Failed"')
     retry_command.add_argument('--id', type=str, help='Object ID to retry.')
+    retry_command.add_argument('--script-path', type=str, help='Script path to update the job or action.')
     retry_command.set_defaults(func=retry)
 
     # Cancel
@@ -109,12 +110,12 @@ def main():
     create_command.set_defaults(func=create)
 
     # Update
-    create_command = subparsers.add_parser('update', help='Update an object.')
-    create_command.add_argument('--env', type=str, help='Environment to use.')
-    create_command.add_argument('--type', type=str, help='Object type : job, action, ...')
-    create_command.add_argument('--id', type=str, help='Object ID.')
-    create_command.add_argument('--script-path', type=str, help='Script path to update the job or action.')
-    create_command.set_defaults(func=update)
+    update_command = subparsers.add_parser('update', help='Update an object.')
+    update_command.add_argument('--env', type=str, help='Environment to use.')
+    update_command.add_argument('--type', type=str, help='Object type : job, action, ...')
+    update_command.add_argument('--id', type=str, help='Object ID.')
+    update_command.add_argument('--script-path', type=str, help='Script path to update the job or action.')
+    update_command.set_defaults(func=update)
 
     args = parser.parse_args()
 
@@ -330,11 +331,21 @@ def export(args):
             header = args.header
         metadata_migration_tracker.export_csv(final_df, current_dir, type, name, header)
     else:
-        df = metadata_migration_tracker.export_by_batch(args)
+        if type == "assets":
+            total_results = flex_api_client.get_total_results("assets", filters)
+            if total_results > 10000 and 'metadata' in filters:
+                assets = flex_api_client.get_objects_by_filters("assets", filters)
+                df = pd.DataFrame(assets)
+            else:
+                df = metadata_migration_tracker.export_by_batch(args)
+        else:
+            df = metadata_migration_tracker.export_by_batch(args)
         if getattr(args, 'header', None):
             header = args.header
-        metadata_migration_tracker.export_csv(df, current_dir, type, name, header)
-
+        if getattr(args, 'name', None):
+            metadata_migration_tracker.export_csv(df, current_dir, type, name, header)
+        else:
+            metadata_migration_tracker.export_csv(df, current_dir, type, type, header)
 
     end_time = time.time()
     duration = end_time - start_time
@@ -401,8 +412,12 @@ def retry(args):
     while offset < total_number_of_results:
         for instance in instances_to_retry:
             instance_id = instance["id"]
+            if type == 'jobs':
+                if getattr(args, 'script_path', None):
+                    script_path = args.script_path
+                    push_job_configuration(flex_api_client, script_path, instance_id)
             flex_api_client.retry_instance(instance_id, type)
-            time.sleep(30)
+            # time.sleep(3)
             
         offset+=limit
         instances_to_retry = flex_api_client.get_next_objects(type, filters, offset, limit)[type]

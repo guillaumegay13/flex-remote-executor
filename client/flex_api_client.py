@@ -729,7 +729,7 @@ class FlexApiClient:
                         # Add days for the pagination
                         new_createdTo = parsed_createdTo - timedelta(days=pagination_delta_in_days)
                         createdTo = new_createdTo.strftime('%d %b %Y')
-                        object_list.extend(self.get_objects_by_filters(type, filters, limit, 0, True, createdFrom, createdTo))
+                        object_list.extend(self.get_objects_by_filters(type, filters, limit, 0, True, createdFrom, createdTo,pagination_delta_in_days))
                 else:
                     raise Exception("Unable to paginate on the creation date filters as there query already contains a creation date filter.")
 
