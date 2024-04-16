@@ -71,8 +71,7 @@ class FlexExport:
 
         if getattr(args, 'name', None):
 
-            if getattr(args, 'name', None):
-                name = args.name
+            name = args.name
 
             if type == "jobs" and getattr(args, 'name', None):
                 action_name = name
