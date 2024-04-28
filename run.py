@@ -270,6 +270,9 @@ def export(args):
     type = args.type
     filters = args.filters
 
+    if getattr(args, 'name', None):
+        name = args.name
+
     if type == "workflow_dependencies":
         flex_cm_client = FlexCmClient(BASE_URL, USERNAME, PASSWORD)
         migrator = WorfklowMigrator(flex_cm_client)
@@ -417,7 +420,7 @@ def retry(args):
                     script_path = args.script_path
                     push_job_configuration(flex_api_client, script_path, instance_id)
             flex_api_client.retry_instance(instance_id, type)
-            # time.sleep(3)
+            time.sleep(3)
             
         offset+=limit
         instances_to_retry = flex_api_client.get_next_objects(type, filters, offset, limit)[type]
