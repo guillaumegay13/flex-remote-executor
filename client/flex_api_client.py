@@ -238,6 +238,8 @@ class FlexApiClient:
                     'execution-lock-type': lock_type
                 }
 
+                print(f'payload = {payload}')
+
                 response = requests.put(self.base_url + endpoint, json=payload, headers=self.headers)
                 response.raise_for_status()
                 return response.json()
