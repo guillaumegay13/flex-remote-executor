@@ -227,8 +227,8 @@ class FlexApiClient:
                 else:
                     lock_type = 'NONE'
 
-                encoded_content = extracted_content.encode('ISO-8859-1').decode('utf-8')
-                # encoded_content = extracted_content
+                # encoded_content = extracted_content.encode('Windows-1252').decode('utf-8')
+                encoded_content = extracted_content
                 
                 payload = {
                     'internal-script': {

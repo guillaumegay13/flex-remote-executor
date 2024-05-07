@@ -241,7 +241,7 @@ def update(args):
     match type:
         case 'job':
             if not getattr(args, 'script_path', None):
-                print("Please specify a type for the object to update.")
+                print("Please specify a script path for the object to update.")
                 return
             script_path = args.script_path
             push_job_configuration(flex_api_client, script_path, id)
@@ -371,6 +371,9 @@ def retry(args):
     if getattr(args, 'id', None):
         id = args.id
         if type == 'job' or type == 'jobs':
+            if getattr(args, 'script_path', None):
+                script_path = args.script_path
+                push_job_configuration(flex_api_client, script_path, id)
             flex_api_client.retry_job(id)
         elif type == 'workflow' or type == 'workflows':
             flex_api_client.retry_workflow(id)
