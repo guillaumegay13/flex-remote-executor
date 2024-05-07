@@ -237,10 +237,8 @@ class FlexApiClient:
                     'execution-lock-type': lock_type
                 }
 
-
                 response = requests.put(self.base_url + endpoint, json=payload, headers=self.headers)
                 response.raise_for_status()
-                print (response.text)
                 return response.json()
         except FileNotFoundError:
             raise Exception(f"File not found: {file_path}")
