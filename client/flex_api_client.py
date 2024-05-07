@@ -240,7 +240,8 @@ class FlexApiClient:
 
                 response = requests.put(self.base_url + endpoint, json=payload, headers=self.headers)
                 response.raise_for_status()
-                return response.content
+                print (response.text)
+                return response.json()
         except FileNotFoundError:
             raise Exception(f"File not found: {file_path}")
         except requests.RequestException as e:
