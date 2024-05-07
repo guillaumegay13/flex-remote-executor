@@ -5,6 +5,7 @@ from objects.flex_objects import FlexInstance, FlexAsset
 from datetime import datetime, timedelta
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from utils import detect_encoding
 
 # Increase default recursion limit (from 999 to 1500)
 # See : https://stackoverflow.com/questions/14222416/recursion-in-python-runtimeerror-maximum-recursion-depth-exceeded-while-callin
@@ -190,7 +191,9 @@ class FlexApiClient:
         """Push the action configuration to the environment."""
         endpoint = f"/{objectType}s/{objectId}/configuration"
         try:
-            with open(file_path, 'r') as file:
+            encoding = detect_encoding(file_path)
+
+            with open(file_path, 'r', encoding=encoding) as file:
                 lines = file.readlines()
 
                 ## Parse the file properly
@@ -217,7 +220,6 @@ class FlexApiClient:
                             # Import the correct libs
                             imports.append(line.replace('import ', ''))
 
-
                 # Convert the list of lines to a single string
                 extracted_content = ''.join(captured_content)
             
@@ -226,19 +228,15 @@ class FlexApiClient:
                     lock_type = 'EXCLUSIVE'
                 else:
                     lock_type = 'NONE'
-
-                # encoded_content = extracted_content.encode('Windows-1252').decode('utf-8')
-                encoded_content = extracted_content
                 
                 payload = {
                     'internal-script': {
-                        'script-content': encoded_content,
+                        'script-content': extracted_content,
                         'script-import': imports
                         },
                     'execution-lock-type': lock_type
                 }
 
-                print(f'payload = {payload}')
 
                 response = requests.put(self.base_url + endpoint, json=payload, headers=self.headers)
                 response.raise_for_status()
