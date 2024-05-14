@@ -187,7 +187,25 @@ class FlexApiClient:
         except requests.RequestException as e:
             raise Exception(e)
         
-    def push_object_configuration(self, file_path, objectId, objectType):
+    def get_script_configuration(self, objectId):
+        """Get the action configuration from the environment."""
+        endpoint = f"/actions/{objectId}/configuration"
+        try:
+            response = requests.get(self.base_url + endpoint, headers=self.headers)
+            response.raise_for_status()
+            response_json = response.json()
+
+            # Works only with scripts
+            script_content = response_json["instance"]["internal-script"]["script-content"]
+            script_import = response_json["instance"]["internal-script"]["script-import"]
+            internal_jar_url = response_json["instance"]["internal-script"]["internal-jar-url"]
+            lock = response_json["instance"]["execution-lock-type"]
+            return script_content, script_import, internal_jar_url, lock
+        except requests.RequestException as e:
+            raise Exception(e)
+    
+
+    def push_object_configuration(self, file_path, objectId, objectType, keep_imports = False):
         """Push the action configuration to the environment."""
         endpoint = f"/{objectType}s/{objectId}/configuration"
         try:
@@ -224,18 +242,32 @@ class FlexApiClient:
                 extracted_content = ''.join(captured_content)
             
                 # Auto-select the lock type
-                if 'setAssetMetadata' in extracted_content:
+                if 'setAssetMetadata' in extracted_content and not keep_imports:
                     lock_type = 'EXCLUSIVE'
                 else:
                     lock_type = 'NONE'
                 
-                payload = {
-                    'internal-script': {
-                        'script-content': extracted_content,
-                        'script-import': imports
-                        },
-                    'execution-lock-type': lock_type
-                }
+                if not keep_imports:
+                    payload = {
+                        'internal-script': {
+                            'script-content': extracted_content,
+                            'script-import': imports
+                            },
+                        'execution-lock-type': lock_type
+                    }
+                else:
+                    job = self.get_job(objectId)
+                    action_id = job["action"]["id"]
+                    script_content, script_import, internal_jar_url, lock = self.get_script_configuration(action_id)
+                    payload = {
+                        'internal-script': {
+                            'script-content': extracted_content,
+                            'script-import': script_import,
+                            'internal-jar-url': internal_jar_url
+                            },
+                        'execution-lock-type': lock
+                    }
+
 
                 response = requests.put(self.base_url + endpoint, json=payload, headers=self.headers)
                 response.raise_for_status()

@@ -26,7 +26,7 @@ def create_job(flexApiClient, file_path):
     with open(file_path, 'w') as file:
         file.writelines(lines)
 
-def push_job_configuration(flexApiClient, file_path, job_id = None):
+def push_job_configuration(flexApiClient, file_path, job_id = None, keep_imports = False):
     if not job_id:
         with open(file_path, 'r') as file:
             lines = file.readlines()
@@ -39,7 +39,7 @@ def push_job_configuration(flexApiClient, file_path, job_id = None):
             raise Exception("Last Job ID not found. Please create a new job first!")
     
     print(f"Updating job ID {job_id}...")
-    flexApiClient.push_object_configuration(file_path, job_id, "job")
+    flexApiClient.push_object_configuration(file_path, job_id, "job", keep_imports)
 
 def update_and_retry_last_job(flexApiClient, file_path):
     with open(file_path, 'r') as file:

@@ -83,6 +83,7 @@ def main():
     retry_command.add_argument('--filters', type=str, help='Filters to apply. Example : "status=Failed"')
     retry_command.add_argument('--id', type=str, help='Object ID to retry.')
     retry_command.add_argument('--script-path', type=str, help='Script path to update the job or action.')
+    retry_command.add_argument('--keep-imports', action='store_true', help='Keep the import section of the job, without updating it with classes from the script. Only available with the --script-path flag.')
     retry_command.set_defaults(func=retry)
 
     # Cancel
@@ -421,7 +422,10 @@ def retry(args):
             if type == 'jobs':
                 if getattr(args, 'script_path', None):
                     script_path = args.script_path
-                    push_job_configuration(flex_api_client, script_path, instance_id)
+                    if getattr(args, 'keep_imports', None):
+                        push_job_configuration(flex_api_client, script_path, instance_id, True)
+                    else:
+                        push_job_configuration(flex_api_client, script_path, instance_id, False)
             flex_api_client.retry_instance(instance_id, type)
             time.sleep(3)
             
