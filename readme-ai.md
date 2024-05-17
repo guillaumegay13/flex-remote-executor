@@ -197,19 +197,19 @@ Note: you need to create an environment first to use the other commands!
 python run.py create --env <ENV> [--set-default] --type <TYPE> --name <NAME> --value <VALUE> [--definitionId <DEFINITION_ID>] [--assetId <ASSET_ID>] [--assetIds <ASSET_IDS>] [--url <URL>] [--username <USERNAME>] [--password <PASSWORD>]
 ```
 
-**Arguments:**
+Arguments  
 
-> --type: Object type (e.g., env, action, header, workflow, job).  
-> --set-default: Set environment as default (only compatible with --type env).  
-> --env: Environment to use.  
-> --name: Object name.  
-> --value: Object value.  
-> --definitionId: Workflow definition ID.  
-> --assetId: Asset ID to launch the job or workflow on.  
-> --assetIds: Asset IDs to launch the job or workflow on.  
-> --url: Environment URL.  
-> --username: Username.  
-> --password: User password.  
+--type: *object type (e.g., env, action, header, workflow, job)*  
+--set-default: *set environment as default (only compatible with --type env)*  
+--env: *environment to use*  
+--name: *object name*  
+--value: *object value*  
+--definitionId: *workflow definition ID*  
+--assetId: *asset ID to launch the job or workflow on*   
+--assetIds: *asset IDs to launch the job or workflow on*  
+--url: *environment URL*  
+--username: *username*  
+--password: *user password*  
 
 #### Export
 Exports objects to a CSV.
@@ -218,16 +218,16 @@ Exports objects to a CSV.
 python run.py export --env <ENV> --type <TYPE> --name <NAME> [--filters <FILTERS>] [--include-error] [--include-metadata] [--header <HEADER>] [--uuid <UUID>]
 ```
 
-**Arguments:**
+Arguments:
 
-> --env: Environment to use.  
-> --type: Object type (e.g., jobs, assets, workflows).  
-> --name: Object name (e.g., action name, workflow definition name).  
-> --filters: Export filters to apply (e.g., "status=Failed").  
-> --include-error: Include error details (only useful for failed jobs).  
-> --include-metadata: Include metadata (only useful for assets).  
-> --header: Header for columns to export.  
-> --uuid: Object UUID to export.  
+> --env: *environment to use*  
+> --type: *object type (e.g., jobs, assets, workflows)*  
+> --name: *object name (e.g., action name, workflow definition name)*  
+> --filters: *export filters to apply (e.g., "status=Failed")*  
+> --include-error: *include error details (only useful for failed jobs)*  
+> --include-metadata: *include metadata (only useful for assets)*  
+> --header: *header for columns to export*  
+> --uuid: *object UUID to export*  
 
 
 #### Retry
@@ -237,15 +237,15 @@ Retries failed jobs.
 python run.py retry --env <ENV> --type <TYPE> --name <NAME> [--filters <FILTERS>] [--id <ID>] [--script-path <SCRIPT_PATH>] [--keep-imports]
 ```
 
-**Arguments:**
+Arguments  
 
-> --env: Environment to use.  
-> --type: Object type (e.g., jobs, workflows).  
-> --name: Object name (e.g., action name, workflow definition name).  
-> --filters: Filters to apply (e.g., "status=Failed").  
-> --id: Object ID to retry.  
-> --script-path: Script path to update the job or action.  
-> --keep-imports: Keep the import section of the job without updating it with classes from the script (only available with the --script-path flag).  
+> --env: *environment to use*  
+> --type: *object type (e.g., jobs, workflows)*  
+> --name: *object name (e.g., action name, workflow definition name)*  
+> --filters: *filters to apply (e.g., "status=Failed")*  
+> --id: *object ID to retry*  
+> --script-path: *script path to update the job or action*  
+> --keep-imports: *keep the import section of the job without updating it with classes from the script (only available with the --script-path flag)*  
 
 
 #### Cancel
@@ -255,13 +255,13 @@ Cancels failed jobs.
 python run.py cancel --env <ENV> --type <TYPE> --name <NAME> [--filters <FILTERS>] [--errors <ERRORS>]
 ```
 
-# Arguments:
+Arguments  
 
-> --env: Environment to use.  
-> --type: Object type (e.g., jobs, workflows).  
-> --name: Object name (e.g., action name, workflow definition name).  
-> --filters: Filters to apply (e.g., "status=Failed").  
-> --errors: Error message of jobs to cancel (e.g., "Resource item named").  
+> --env: *environment to use*  
+> --type: *object type (e.g., jobs, workflows)*  
+> --name: *object name (e.g., action name, workflow definition name)*  
+> --filters: *filters to apply (e.g., "status=Failed")*  
+> --errors: *error message of jobs to cancel (e.g., "Resource item named")*  
 
 #### Update
 Updates an object.
@@ -270,12 +270,12 @@ Updates an object.
 python run.py update --env <ENV> --type <TYPE> --id <ID> --script-path <SCRIPT_PATH>
 ```
 
-**Arguments:**
+Arguments  
 
-> --env: Environment to use.  
-> --type: Object type (e.g., job, action).  
-> --id: Object ID.  
-> --script-path: Script path to update the job or action.  
+> --env: *environment to use*  
+> --type: *object type (e.g., job, action)*  
+> --id: *pbject ID*  
+> --script-path: *script path to update the job or action*  
 
 #### Examples
 
