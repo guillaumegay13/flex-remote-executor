@@ -46,8 +46,6 @@ Flex Remote Executor is a comprehensive software project that facilitates seamle
 
 ###  Installation
 
-<h4>From <code>source</code></h4>
-
 > 1. Clone the flex-remote-executor repository:
 >
 > ```console
