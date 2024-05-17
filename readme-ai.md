@@ -175,18 +175,14 @@ Flex Remote Executor is a comprehensive software project that facilitates seamle
 
 ###  Usage
 
-<h4>From <code>source</code></h4>
-
 > Run flex-remote-executor using the command below:
 > ```console
-> $ python main.py
+> $ python run.py
 > ```
 
-###  Tests
-
-> Run the test suite using the command below:
-> ```console
-> $ pytest
+> [OPTIONAL] Create an alias and add it to your .bashrc file:
+> ```
+> alias fre='python run.py'
 > ```
 
 ---
