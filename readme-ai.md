@@ -42,7 +42,7 @@ Flex Remote Executor is a comprehensive software project that facilitates seamle
 
 **System Requirements:**
 
-* **Python**: `version x.y.z`
+* **Python**: `version 3.10.x`
 
 ###  Installation
 
