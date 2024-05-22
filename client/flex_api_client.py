@@ -273,9 +273,11 @@ class FlexApiClient:
                 response.raise_for_status()
                 return response.json()
         except FileNotFoundError:
-            raise Exception(f"File not found: {file_path}")
+            print(f"File not found: {file_path}")
+            pass
         except requests.RequestException as e:
-            raise Exception(e)
+            print(e)
+            pass
     
     def pull_action_configuration(self, file_path, objectId, objectType):
         """Pull the action configuration from the environment."""
