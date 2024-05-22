@@ -444,7 +444,8 @@ class FlexApiClient:
             jobStatus = self.get_job(jobId)["status"]
 
             if jobStatus != "Failed":
-                raise Exception(f"Couldn't retry the job as it is not Failed, its status is : {jobStatus}")
+                print(f"Couldn't retry the job as it is not Failed, its status is : {jobStatus}")
+                pass
 
             payload = {
                         'action': 'retry'
