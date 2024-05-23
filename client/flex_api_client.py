@@ -377,7 +377,7 @@ class FlexApiClient:
                 print("Writing header at line " + str(insert_index))
                 file.writelines(lines)
         
-    def create_job(self, actionId, assetId = None):
+    def create_job(self, actionId, assetId = None, variables = None):
         """Create a new job."""
         endpoint = "/jobs"
         try:
@@ -388,6 +388,9 @@ class FlexApiClient:
             if assetId:
                 payload["assetId"] = assetId
 
+            if variables:
+                payload["stringVariables"] = variables
+
             response = requests.post(self.base_url + endpoint, json=payload, headers=self.headers)
             response.raise_for_status()
 
@@ -395,7 +398,7 @@ class FlexApiClient:
         except requests.RequestException as e:
             raise Exception(e)
         
-    def create_workflow(self, definitionId, assetId):
+    def create_workflow(self, definitionId, assetId, variables = None):
         """Create a new workflow."""
         endpoint = "/workflows"
         try:
@@ -405,6 +408,9 @@ class FlexApiClient:
                 
             if assetId:
                 payload["assetId"] = assetId
+
+            if variables:
+                payload["stringVariables"] = variables
 
             response = requests.post(self.base_url + endpoint, json=payload, headers=self.headers)
             response.raise_for_status()
@@ -818,9 +824,9 @@ class FlexApiClient:
         except requests.RequestException as e:
             print(f"Couldn't retry job ID {workflowId} :", e)
 
-    def get_workflow(self, workflowId):
+    def get_workflow(self, workflowId, include_variables = 'false'):
         """Get a workflow."""
-        endpoint = f"/workflows/{workflowId}"
+        endpoint = f"/workflows/{workflowId};includeVariables={include_variables}"
         try:
                 
             response = requests.get(self.base_url + endpoint, headers=self.headers)

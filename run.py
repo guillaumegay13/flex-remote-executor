@@ -119,6 +119,15 @@ def main():
     update_command.add_argument('--script-path', type=str, help='Script path to update the job or action.')
     update_command.set_defaults(func=update)
 
+    # Cancel and relaunch
+    cancel_and_relaunch_command = subparsers.add_parser('cancel_and_relaunch', help='Cancel an instance and relaunch a new one with the same variables.')
+    cancel_and_relaunch_command.add_argument('--env', type=str, help='Environment to use.')
+    cancel_and_relaunch_command.add_argument('--name', type=str, help='Object name.')
+    cancel_and_relaunch_command.add_argument('--type', type=str, help='Object type : workflows, jobs, actions, ...')
+    cancel_and_relaunch_command.add_argument('--id', type=str, help='Object ID.')
+    cancel_and_relaunch_command.add_argument('--ids', type=str, help='Object IDs.')
+    cancel_and_relaunch_command.set_defaults(func=cancel_and_relaunch_cmd)
+
     args = parser.parse_args()
 
     if hasattr(args, 'func'):
@@ -451,8 +460,6 @@ def retry(args):
 
 def cancel(args):
 
-    start_time = time.time()
-
     if getattr(args, 'env', None):
         (BASE_URL, USERNAME, PASSWORD) = connect(args.env)
     else:
@@ -463,15 +470,24 @@ def cancel(args):
     type = args.type
     filters = args.filters
 
-    if type == "workflows":
+    start_time = time.time()
+
+    if getattr(args, 'id', None):
+        id = args.id
+        flex_api_client.cancel_instance(type, id)
+    elif getattr(args, 'ids', None):
+        ids = args.ids.split(',')
+        for id in ids:
+            flex_api_client.cancel_instance(type, id)
+
+    elif type == "workflows":
+
         if getattr(args, 'name', None):
             name = args.name
             workflow_definition_name = name
             workflow_definition_id = flex_api_client.get_workflow_definition_id(workflow_definition_name)
             if filters:
                 filters += f";definitionId={workflow_definition_id}"
-            else: 
-                filters = f"actionId={workflow_definition_id}"
         instances = flex_api_client.get_objects_by_filters(type, filters)
         print(f"Number of instances to cancel : {len(instances)}")
         for instance in instances:
@@ -480,6 +496,11 @@ def cancel(args):
             print(f"Cancel instance ID {instance_id}")
 
     elif type == "jobs":
+        if getattr(args, 'name', None):
+            name = args.name
+            action_name = name
+            action_id = flex_api_client.get_action_id(action_name)
+            filters = f"actionId={action_id}"
         if getattr(args, 'errors', None):
             cancel_failed_jobs(flex_api_client, args)
         else:
@@ -496,6 +517,95 @@ def cancel(args):
         end_time = time.time()
         duration = end_time - start_time
         print(f"finished in {round(duration)}s.")
+
+def cancel_and_relaunch_cmd(args):
+
+    if getattr(args, 'env', None):
+        (BASE_URL, USERNAME, PASSWORD) = connect(args.env)
+    else:
+        (BASE_URL, USERNAME, PASSWORD) = connect('default')
+        
+    flex_api_client = FlexApiClient(BASE_URL, USERNAME, PASSWORD)
+
+    type = args.type
+    if getattr(args, 'filters', None):
+        filters = args.filters
+
+    start_time = time.time()
+
+    if type == "workflows":
+        if getattr(args, 'id', None):
+            id = args.id
+            cancel_and_relaunch_workflow(flex_api_client, id)
+        elif getattr(args, 'ids', None):
+            ids = args.ids.split(',')
+            for id in ids:
+                cancel_and_relaunch_workflow(flex_api_client, id)
+
+        else:
+            if getattr(args, 'name', None):
+                name = args.name
+                workflow_definition_name = name
+                workflow_definition_id = flex_api_client.get_workflow_definition_id(workflow_definition_name)
+                if filters:
+                    filters += f";definitionId={workflow_definition_id}"
+            instances = flex_api_client.get_objects_by_filters(type, filters)
+            print(f"Number of instances to cancel : {len(instances)}")
+            for instance in instances:
+                instance_id = instance["id"]
+                cancel_and_relaunch_workflow(flex_api_client, instance_id)
+
+    elif type == "jobs":
+
+        if getattr(args, 'id', None):
+            id = args.id
+            cancel_and_relaunch_job(flex_api_client, id)
+        elif getattr(args, 'ids', None):
+            ids = args.ids.split(',')
+            for id in ids:
+                cancel_and_relaunch_job(flex_api_client, id)
+        else:
+            if getattr(args, 'name', None):
+                name = args.name
+                action_name = name
+                action_id = flex_api_client.get_action_id(action_name)
+                filters = f"actionId={action_id}"
+            if getattr(args, 'errors', None):
+                cancel_failed_jobs(flex_api_client, args)
+            else:
+                # Cancel jobs regardless of their errors
+                job_list = get_jobs(args, flex_api_client)
+                print(f"Number of jobs to cancel and relaunch: {len(job_list)}")
+                for job in job_list:
+                    job_id = job["id"]
+                    cancel_and_relaunch_job(flex_api_client, job_id)
+        end_time = time.time()
+        duration = end_time - start_time
+        print(f"finished in {round(duration)}s.")
+
+def cancel_and_relaunch_workflow(flex_api_client, instance_id):
+    flex_api_client.cancel_instance('workflows', instance_id)
+    print(f"Cancel instance ID {instance_id}")
+    # Launch new workflow
+    instance = flex_api_client.get_workflow(instance_id, 'true')
+    variables = instance["variables"]
+    if ("asset" in instance):
+        asset_id = instance["asset"]["id"]
+    else:
+        asset_id = None
+    flex_api_client.create_workflow(instance["definition"]["id"], asset_id, variables)
+
+def cancel_and_relaunch_job(flex_api_client, instance_id):
+    flex_api_client.cancel_instance('jobs', instance_id)
+    print(f"Cancel instance ID {instance_id}")
+    # Launch new workflow
+    instance = flex_api_client.get_job(instance_id, 'true')
+    variables = instance["variables"]
+    if ("asset" in instance):
+        asset_id = instance["asset"]["id"]
+    else:
+        asset_id = None
+    flex_api_client.create_job(instance["action"]["id"], asset_id, variables)
 
 def cancel_failed_jobs(flex_api_client, args):
     errors = args.errors
