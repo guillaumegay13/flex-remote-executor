@@ -85,6 +85,8 @@ def main():
     retry_command.add_argument('--ids', type=str, help='Object IDs to retry.')
     retry_command.add_argument('--script-path', type=str, help='Script path to update the job or action.')
     retry_command.add_argument('--keep-imports', action='store_true', help='Keep the import section of the job, without updating it with classes from the script. Only available with the --script-path flag.')
+    retry_command.add_argument('--errors', type=str, help='Error message of jobs to cancel. Example : "Resource item named"')
+    retry_command.add_argument('--delay', type=str, help='Delay in seconds between each retry')
     retry_command.set_defaults(func=retry)
 
     # Cancel
@@ -94,6 +96,7 @@ def main():
     cancel_command.add_argument('--name', type=str, help='Object name : action name, workflow definition name.')
     cancel_command.add_argument('--filters', type=str, help='Filters to apply. Example : "status=Failed"')
     cancel_command.add_argument('--errors', type=str, help='Error message of jobs to cancel. Example : "Resource item named"')
+    cancel_command.add_argument('--delay', type=str, help='Delay in seconds between each cancel')
     cancel_command.set_defaults(func=cancel)
 
     # Create
@@ -123,6 +126,7 @@ def main():
     cancel_and_relaunch_command = subparsers.add_parser('cancel_and_relaunch', help='Cancel an instance and relaunch a new one with the same variables.')
     cancel_and_relaunch_command.add_argument('--env', type=str, help='Environment to use.')
     cancel_and_relaunch_command.add_argument('--name', type=str, help='Object name.')
+    cancel_and_relaunch_command.add_argument('--filters', type=str, help='Filters to apply.')
     cancel_and_relaunch_command.add_argument('--type', type=str, help='Object type : workflows, jobs, actions, ...')
     cancel_and_relaunch_command.add_argument('--id', type=str, help='Object ID.')
     cancel_and_relaunch_command.add_argument('--ids', type=str, help='Object IDs.')
@@ -378,6 +382,9 @@ def retry(args):
 
     filters = args.filters
     type = args.type
+    
+    if getattr(args, 'delay', None):
+        delay = args.delay
 
     if getattr(args, 'id', None):
         id = args.id
@@ -448,8 +455,24 @@ def retry(args):
                         push_job_configuration(flex_api_client, script_path, instance_id, True)
                     else:
                         push_job_configuration(flex_api_client, script_path, instance_id, False)
-            flex_api_client.retry_instance(instance_id, type)
-            time.sleep(3)
+                if getattr(args, 'errors', None):
+                    errors = args.errors
+                    job_history = flex_api_client.get_job_history(instance_id)
+                    for event in job_history["events"]:
+                        if event["eventType"] == "Failed":
+                            exception_message = event["exceptionMessage"]
+                            error = exception_message.split("\n")[0].replace('Exception: ', '')
+                            for targetted_error in errors.split(','):
+                                if targetted_error in error:
+                                    print(f"Found job ID {instance_id} to retry with error {error}")
+                                    try:
+                                        flex_api_client.retry_job(instance_id)
+                                    except Exception as e:
+                                        print(f"Unable to retry job {instance_id}")
+                else:
+                    flex_api_client.retry_instance(instance_id, type)
+                if delay:
+                    time.sleep(delay)
             
         offset+=limit
         instances_to_retry = flex_api_client.get_next_objects(type, filters, offset, limit)[type]
@@ -469,6 +492,9 @@ def cancel(args):
 
     type = args.type
     filters = args.filters
+
+    if getattr(args, 'delay', None):
+        delay = args.delay
 
     start_time = time.time()
 
@@ -494,6 +520,8 @@ def cancel(args):
             instance_id = instance["id"]
             flex_api_client.cancel_instance(type, instance_id)
             print(f"Cancel instance ID {instance_id}")
+            if delay:
+                time.sleep(delay)
 
     elif type == "jobs":
         if getattr(args, 'name', None):
@@ -513,7 +541,8 @@ def cancel(args):
                     cancel_job(flex_api_client, None, job_id)
                 except Exception as e:
                     print(f"Unable to cancel job {job_id} : ", e)
-                time.sleep(0.05)
+                if delay:
+                    time.sleep(delay)
         end_time = time.time()
         duration = end_time - start_time
         print(f"finished in {round(duration)}s.")
@@ -615,15 +644,18 @@ def cancel_failed_jobs(flex_api_client, args):
     result = flex_api_client.get_jobs_batch_by_filter(filters, 0, 1)
     total_results = result["totalCount"]
 
+    if getattr(args, 'delay', None):
+        delay = args.delay
+
     offset = 0
     limit = 100
     while (total_results > offset + limit):
         print(f"Getting next jobs from {offset} to {offset + limit}")
         jobs = flex_api_client.get_jobs_batch_by_filter(filters, offset, limit)["jobs"]
-        cancel_jobs_by_errors(jobs, flex_api_client, errors)
+        cancel_jobs_by_errors(jobs, flex_api_client, errors, delay)
         offset += limit
 
-def cancel_jobs_by_errors(jobs, flex_api_client, errors):
+def cancel_jobs_by_errors(jobs, flex_api_client, errors, delay = None):
     for job in jobs:
         job_id = job["id"]
         job_history = flex_api_client.get_job_history(job["id"])
@@ -638,6 +670,8 @@ def cancel_jobs_by_errors(jobs, flex_api_client, errors):
                             cancel_job(flex_api_client, None, job_id)
                         except Exception as e:
                             print(f"Unable to cancel job {job_id}")
+        if delay:
+            time.sleep(delay)
 
 def get_jobs(args, flex_api_client):
     # only failed objects can be cancelled
