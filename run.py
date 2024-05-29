@@ -86,7 +86,7 @@ def main():
     retry_command.add_argument('--script-path', type=str, help='Script path to update the job or action.')
     retry_command.add_argument('--keep-imports', action='store_true', help='Keep the import section of the job, without updating it with classes from the script. Only available with the --script-path flag.')
     retry_command.add_argument('--errors', type=str, help='Error message of jobs to cancel. Example : "Resource item named"')
-    retry_command.add_argument('--delay', type=str, help='Delay in seconds between each retry')
+    retry_command.add_argument('--delay', type=int, help='Delay in seconds between each retry')
     retry_command.set_defaults(func=retry)
 
     # Cancel
@@ -96,7 +96,7 @@ def main():
     cancel_command.add_argument('--name', type=str, help='Object name : action name, workflow definition name.')
     cancel_command.add_argument('--filters', type=str, help='Filters to apply. Example : "status=Failed"')
     cancel_command.add_argument('--errors', type=str, help='Error message of jobs to cancel. Example : "Resource item named"')
-    cancel_command.add_argument('--delay', type=str, help='Delay in seconds between each cancel')
+    cancel_command.add_argument('--delay', type=int, help='Delay in seconds between each cancel')
     cancel_command.set_defaults(func=cancel)
 
     # Create
