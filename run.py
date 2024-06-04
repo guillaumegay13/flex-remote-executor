@@ -383,6 +383,7 @@ def retry(args):
     filters = args.filters
     type = args.type
     
+    delay = None
     if getattr(args, 'delay', None):
         delay = args.delay
 
@@ -493,6 +494,7 @@ def cancel(args):
     type = args.type
     filters = args.filters
 
+    delay = None
     if getattr(args, 'delay', None):
         delay = args.delay
 

@@ -470,10 +470,13 @@ class FlexApiClient:
         """Cancel a job."""
         endpoint = f"/jobs/{jobId}/actions"
         try:
+            """
             jobStatus = self.get_job(jobId)["status"]
 
-            if jobStatus != "Failed":
+            if jobStatus != "Failed" or jobStatus != "Pending":
                 raise Exception(f"Couldn't cancel the job as it is not Failed, its status is : {jobStatus}")
+            """
+
             payload = {
                         'action': 'cancel'
                     }
@@ -492,7 +495,7 @@ class FlexApiClient:
         try:
             status = self.get_instance(instanceId, type)["status"]
 
-            if status != "Failed":
+            if status != "Failed" :
                 raise Exception(f"Couldn't cancel the instance ID {instanceId} as it is not Failed, its status is : {status}")
             payload = {
                         'action': 'cancel'
