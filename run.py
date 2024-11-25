@@ -67,6 +67,7 @@ def main():
     export_command = subparsers.add_parser('export', help='Export objects to a CSV.')
     export_command.add_argument('--env', type=str, help='Environment to use.')
     export_command.add_argument('--type', type=str, help='Object type : jobs, assets, workflows, etc.')
+    export_command.add_argument('--plural-name', type=str, help='Objects Plural Name.')
     export_command.add_argument('--name', type=str, help='Object name : action name, workflow definition name.')
     export_command.add_argument('--filters', type=str, help='Export filters to apply. Example : "status=Failed"')
     export_command.add_argument('--include-error', action='store_true', help='Include error (only useful for failed jobs).')
@@ -351,15 +352,28 @@ def export(args):
     else:
         if type == "assets":
             total_results = flex_api_client.get_total_results("assets", filters)
-            if total_results > 10000 and 'metadata' in filters:
+            if total_results > 10000 and 'metadata=' in filters:
                 assets = flex_api_client.get_objects_by_filters("assets", filters)
                 df = pd.DataFrame(assets)
             else:
                 df = metadata_migration_tracker.export_by_batch(args)
+        elif type == "objects":
+            if getattr(args, 'plural_name', None):
+                plural_name = args.plural_name
+            else:
+                raise Exception("Please specify a plural name for the objects")
+            total_results = flex_api_client.get_total_results(plural_name, filters)
+            if total_results > 10000 and ('data' in filters or 'fql' in filters):
+                objects = flex_api_client.get_objects_by_filters(type, filters, plural_name=plural_name)
+                df = pd.DataFrame(objects)
+            else:
+                df = metadata_migration_tracker.export_by_batch(args)
         else:
             df = metadata_migration_tracker.export_by_batch(args)
+
         if getattr(args, 'header', None):
             header = args.header
+
         if getattr(args, 'name', None):
             metadata_migration_tracker.export_csv(df, current_dir, type, name, header)
         else:

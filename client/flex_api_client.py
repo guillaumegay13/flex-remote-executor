@@ -721,12 +721,17 @@ class FlexApiClient:
         except requests.RequestException as e:
             raise Exception(e)
         
-    def get_objects_by_filters(self, type, filters, limit = 100, offset = 0, pagination=False, createdFrom=None, createdTo=None, pagination_delta_in_days=None):
+    def get_objects_by_filters(self, type, filters, limit = 100, offset = 0, pagination=False, createdFrom=None, createdTo=None, pagination_delta_in_days=None, plural_name=None, pagination_delta_in_hours = 24):
         """Get objects."""
         """Supports the offset until 10000 results, and pagination on created dates if it is required (metadata filters)."""
         # Set variables
         if not pagination_delta_in_days:
             pagination_delta_in_days = 10
+
+        if pagination_delta_in_hours != 24 and createdTo.hours < 24:
+            time_change = datetime.timedelta(hours=pagination_delta_in_hours)
+            createdFrom += time_change
+            createdTo += time_change
 
         # End condition
         if createdFrom and datetime.now() < datetime.strptime(createdFrom, '%d %b %Y'):
@@ -737,11 +742,18 @@ class FlexApiClient:
             # No asset can be found
             return []
         
-        # Set up creation date filters for pagination in the endpoint
-        if createdFrom and createdTo:
-            endpoint = f"/{type};{filters};offset={offset};createdFrom={createdFrom};createdTo={createdTo}"
+        if (plural_name):
+            if createdFrom and createdTo:
+                endpoint = f"/{plural_name};{filters};offset={offset};createdFrom={createdFrom};createdTo={createdTo}"
+            else:
+                endpoint = f"/{plural_name};{filters};offset={offset}"
+
         else:
-            endpoint = f"/{type};{filters};offset={offset}"
+            # Set up creation date filters for pagination in the endpoint
+            if createdFrom and createdTo:
+                endpoint = f"/{type};{filters};offset={offset};createdFrom={createdFrom};createdTo={createdTo}"
+            else:
+                endpoint = f"/{type};{filters};offset={offset}"
 
         # Retrieve assets
         try:
@@ -763,22 +775,31 @@ class FlexApiClient:
                         createdFrom = from_date.strftime('%d %b %Y')
                         new_createdTo = from_date + timedelta(days=pagination_delta_in_days)
                         createdTo = new_createdTo.strftime('%d %b %Y')
-                        object_list.extend(self.get_objects_by_filters(type, filters, limit, 0, True, createdFrom, createdTo))
+                        object_list.extend(self.get_objects_by_filters(type, filters, limit, 0, True, createdFrom, createdTo, None, plural_name))
                     else:
-                        # if pagination and total_results > 10000, divide the pagination delta by 2
-                        pagination_delta_in_days //= 2
-                        print(f"Reducing the pagination delta to {pagination_delta_in_days}")
-                        parsed_createdTo = datetime.strptime(createdTo, '%d %b %Y')
-                        # Add days for the pagination
-                        new_createdTo = parsed_createdTo - timedelta(days=pagination_delta_in_days)
-                        createdTo = new_createdTo.strftime('%d %b %Y')
-                        object_list.extend(self.get_objects_by_filters(type, filters, limit, 0, True, createdFrom, createdTo,pagination_delta_in_days))
+                        if pagination_delta_in_days == 1:
+                            pagination_delta_in_hours //= 2
+                            print(f"Reducing the pagination delta to {pagination_delta_in_hours} hours")
+                            parsed_createdTo = datetime.strptime(createdTo, '%d %b %Y')
+                            # Add days for the pagination
+                            new_createdTo = parsed_createdTo - timedelta(days=pagination_delta_in_days)
+                            createdTo = new_createdTo.strftime('%d %b %Y')
+                            object_list.extend(self.get_objects_by_filters(type, filters, limit, 0, True, createdFrom, createdTo, pagination_delta_in_days, plural_name, pagination_delta_in_hours))
+                        else:
+                            # if pagination and total_results > 10000, divide the pagination delta by 2
+                            pagination_delta_in_days //= 2
+                            print(f"Reducing the pagination delta to {pagination_delta_in_days} days")
+                            parsed_createdTo = datetime.strptime(createdTo, '%d %b %Y')
+                            # Add days for the pagination
+                            new_createdTo = parsed_createdTo - timedelta(days=pagination_delta_in_days)
+                            createdTo = new_createdTo.strftime('%d %b %Y')
+                            object_list.extend(self.get_objects_by_filters(type, filters, limit, 0, True, createdFrom, createdTo, pagination_delta_in_days, plural_name))
                 else:
                     raise Exception("Unable to paginate on the creation date filters as there query already contains a creation date filter.")
 
             elif (total_results > offset + limit):
                 # Set new offset
-                object_list.extend(self.get_objects_by_filters(type, filters, limit, offset + limit, pagination, createdFrom, createdTo))
+                object_list.extend(self.get_objects_by_filters(type, filters, limit, offset + limit, pagination, createdFrom, createdTo, None, plural_name))
             elif pagination:
                 # Set new pagination creation date filters
                 createdFrom = createdTo
@@ -786,7 +807,7 @@ class FlexApiClient:
                 # Add days for the pagination
                 new_date = parsed_date + timedelta(days=pagination_delta_in_days)
                 createdTo = new_date.strftime('%d %b %Y')
-                object_list.extend(self.get_objects_by_filters(type, filters, limit, 0, True, createdFrom, createdTo))
+                object_list.extend(self.get_objects_by_filters(type, filters, limit, 0, True, createdFrom, createdTo, None, plural_name))
 
             return object_list
         except requests.RequestException as e:
@@ -800,7 +821,6 @@ class FlexApiClient:
             response = requests.get(self.base_url + endpoint, headers=self.headers)
             response.raise_for_status()
             response_json = response.json()
-            object_list = response_json[type]
             total_results = response_json["totalCount"]
             return total_results
         except requests.RequestException as e:
@@ -879,7 +899,6 @@ class FlexApiClient:
             response = requests.get(self.base_url + endpoint, headers=self.headers)
             response.raise_for_status()
             response_json = response.json()
-            # object_list = response_json[type]
             return response_json
         except requests.RequestException as e:
             raise Exception(e)
