@@ -4,6 +4,7 @@ import os
 import json
 import concurrent.futures
 from utils import create_empty_directory
+from tqdm import tqdm
 
 class FlexExport:
     def __init__(self, flex_api_client):
@@ -99,23 +100,29 @@ class FlexExport:
 
         total_number_of_results = self.flex_api_client.get_total_results(type, filters)
 
-        print(f"Number of instances to export : {total_number_of_results}")
+        print(f"Number of instances to export: {total_number_of_results}")
 
         offsets = range(0, total_number_of_results, limit)
 
         # Using ThreadPoolExecutor to run API calls in parallel
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Create a future
-            futures = [executor.submit(self.flex_api_client.get_next_objects, type, filters, offset, limit) for offset in offsets]
+            # Create a progress bar
+            with tqdm(total=len(offsets), desc="Exporting data") as pbar:
+                futures = [
+                    executor.submit(self.flex_api_client.get_next_objects, type, filters, offset, limit)
+                    for offset in offsets
+                ]
 
-            # Collecting results as they complete
-            objects = []
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    data = future.result()
-                    objects.extend(data[f'{type}'])
-                except Exception as exc:
-                    print(f"An error occurred: {exc}")
+                # Collecting results as they complete
+                objects = []
+                for future in concurrent.futures.as_completed(futures):
+                    try:
+                        data = future.result()
+                        objects.extend(data[f'{type}'])
+                    except Exception as exc:
+                        print(f"An error occurred: {exc}")
+                    finally:
+                        pbar.update(1)  # Increment progress bar for each completed future
 
         df = pd.DataFrame(objects)
 
