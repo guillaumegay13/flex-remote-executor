@@ -352,7 +352,7 @@ def export(args):
     else:
         if type == "assets":
             total_results = flex_api_client.get_total_results("assets", filters)
-            if total_results > 10000 and 'metadata=' in filters:
+            if total_results > 10000 and 'metadata' in filters:
                 assets = flex_api_client.get_objects_by_filters("assets", filters)
                 df = pd.DataFrame(assets)
             else:

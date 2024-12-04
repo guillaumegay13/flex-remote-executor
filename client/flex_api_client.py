@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from utils import detect_encoding
+import urllib.parse
 
 # Increase default recursion limit (from 999 to 1500)
 # See : https://stackoverflow.com/questions/14222416/recursion-in-python-runtimeerror-maximum-recursion-depth-exceeded-while-callin
@@ -751,7 +752,18 @@ class FlexApiClient:
         else:
             # Set up creation date filters for pagination in the endpoint
             if createdFrom and createdTo:
-                endpoint = f"/{type};{filters};offset={offset};createdFrom={createdFrom};createdTo={createdTo}"
+                if ('fql' in filters):
+                    # AND created > "2019-08-22" AND created < "2024-03-22"
+                    parsed_created_from = datetime.strptime(createdFrom, '%d %b %Y')
+                    fql_formatted_created_from = datetime.strftime(parsed_created_from, '%Y-%m-%d')
+                    parsed_created_to = datetime.strptime(createdTo, '%d %b %Y')
+                    fql_formatted_created_to = datetime.strftime(parsed_created_to, '%Y-%m-%d')
+                    date_filters_fql = f" AND created > \"{fql_formatted_created_from}\" AND created < \"{fql_formatted_created_to}\""
+                    encoded_date_filters_fql = urllib.parse.quote(date_filters_fql)
+                    # Add encoded date filters for fql
+                    endpoint = f"/{type};{filters}{encoded_date_filters_fql};offset={offset}"
+                else:
+                    endpoint = f"/{type};{filters};offset={offset};createdFrom={createdFrom};createdTo={createdTo}"
             else:
                 endpoint = f"/{type};{filters};offset={offset}"
 

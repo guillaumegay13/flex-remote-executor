@@ -104,16 +104,16 @@ class FlexExport:
 
         offsets = range(0, total_number_of_results, limit)
 
+        max_workers = 5 # Adjust based on environment capacity
+
         # Using ThreadPoolExecutor to run API calls in parallel
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Create a progress bar
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             with tqdm(total=len(offsets), desc="Exporting data") as pbar:
                 futures = [
                     executor.submit(self.flex_api_client.get_next_objects, type, filters, offset, limit)
                     for offset in offsets
                 ]
 
-                # Collecting results as they complete
                 objects = []
                 for future in concurrent.futures.as_completed(futures):
                     try:
@@ -122,7 +122,7 @@ class FlexExport:
                     except Exception as exc:
                         print(f"An error occurred: {exc}")
                     finally:
-                        pbar.update(1)  # Increment progress bar for each completed future
+                        pbar.update(1)
 
         df = pd.DataFrame(objects)
 
@@ -177,10 +177,17 @@ class FlexExport:
             header_file_name = header + '.csv'
             header_file_path = f'{root_dir}/headers/{header_file_name}'
             header = pd.read_csv(header_file_path)
+            print(header_df.columns)
             # Load the CSV file
-            header_df = pd.read_csv(header_file_path, nrows=0)
+            header_df = pd.read_csv(header_file_path, sep=';', nrows=0)
             header = header_df.columns[0]
             columns = header.split(';')
+            
+            print("Columns in df_flat:", df_flat.columns.tolist())
+            missing_columns = [col for col in columns if col not in df_flat.columns]
+            if missing_columns:
+                print(f"Missing Columns in df_flat: {missing_columns}")
+
             df_flat.to_csv(f'{file_path}', columns=columns, sep=';', index=False)
         else:
             df_flat.to_csv(f'{file_path}', sep=';', index=False)
