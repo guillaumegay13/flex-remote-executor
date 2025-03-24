@@ -96,7 +96,7 @@ Arguments
 > --definitionId: *workflow definition ID*  
 > --assetId: *asset ID to launch the job or workflow on*   
 > --assetIds: *asset IDs to launch the job or workflow on*  
-> --url: *environment URL* (this should end by '/api' !)
+> --url: *environment URL* (this should end by '/api' !)  
 > --username: *username*  
 > --password: *user password*  
 
